@@ -26,16 +26,47 @@ static ucl_bool set_method_name(int method, int level)
     if (level < 1 || level > 10)
         return 0;
     if (method == 0x2b)
-        sprintf(method_name,"NRV2B-99/%d", level);
+        sprintf(method_name, "NRV2B-99/%d", level);
     else if (method == 0x2d)
-        sprintf(method_name,"NRV2D-99/%d", level);
+        sprintf(method_name, "NRV2D-99/%d", level);
     else if (method == 0x2e)
-        sprintf(method_name,"NRV2E-99/%d", level);
+        sprintf(method_name, "NRV2E-99/%d", level);
     else
         return 0;
     return 1;
 }
 
+static char *find_file_extension(const char *file_header)
+{
+    if (memcmp(file_header, XVI, 8) == 0)
+    {
+        return "xvi";
+    }
+    else if (memcmp(file_header, TIM2, 8) == 0)
+    {
+        return "tm2";
+        /*}else if(memcmp(file_header, XMDL, 8) == 0){
+            return "xmdl";
+        }else if(memcmp(file_header, DAT, 8) == 0){
+            return "dat";*/
+    }
+    else if (memcmp(file_header, HD, 8) == 0)
+    {
+        return "hd";
+    }
+    else if (memcmp(file_header, BD, 16) == 0)
+    {
+        return "bd";
+    }
+    else if (memcmp(file_header, BD_2, 16) == 0)
+    {
+        return "bd";
+    }
+    else
+    {
+        return "bin";
+    }
+}
 
 ucl_uint swap_uint16(ucl_uint val)
 {
@@ -58,7 +89,6 @@ ucl_int32 swap_int32(ucl_int32 val)
     val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
     return (val << 16) | ((val >> 16) & 0xFFFF);
 }
-
 
 ucl_uint xwrite(FILE *f, const ucl_voidp buf, ucl_uint len)
 {
@@ -102,11 +132,11 @@ ucl_uint32 xread32(FILE *f)
     unsigned char b[4];
     ucl_uint32 v;
 
-    xread(f,b,4,0);
-    v  = (ucl_uint32) b[3] <<  0;
-    v |= (ucl_uint32) b[2] <<  8;
-    v |= (ucl_uint32) b[1] << 16;
-    v |= (ucl_uint32) b[0] << 24;
+    xread(f, b, 4, 0);
+    v = (ucl_uint32)b[3] << 0;
+    v |= (ucl_uint32)b[2] << 8;
+    v |= (ucl_uint32)b[1] << 16;
+    v |= (ucl_uint32)b[0] << 24;
     return v;
 }
 
@@ -114,24 +144,24 @@ void xwrite32(FILE *f, ucl_uint32 v)
 {
     unsigned char b[4];
 
-    b[3] = (unsigned char) (v >>  0);
-    b[2] = (unsigned char) (v >>  8);
-    b[1] = (unsigned char) (v >> 16);
-    b[0] = (unsigned char) (v >> 24);
-    xwrite(f,b,4);
+    b[3] = (unsigned char)(v >> 0);
+    b[2] = (unsigned char)(v >> 8);
+    b[1] = (unsigned char)(v >> 16);
+    b[0] = (unsigned char)(v >> 24);
+    xwrite(f, b, 4);
 }
 
 int xgetc(FILE *f)
 {
     unsigned char c;
-    xread(f,(ucl_voidp) &c,1,0);
+    xread(f, (ucl_voidp)&c, 1, 0);
     return c;
 }
 
 void xputc(FILE *f, int c)
 {
-    unsigned char cc = (unsigned char) c;
-    xwrite(f,(const ucl_voidp) &cc,1);
+    unsigned char cc = (unsigned char)c;
+    xwrite(f, (const ucl_voidp)&cc, 1);
 }
 
 int swap32(int v)
@@ -140,28 +170,32 @@ int swap32(int v)
 }
 
 /*TODO: taken straight from uclpack, needs a lighter alternative rewrite*/
-int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops)
+int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char *filename)
 {
     char progname[] = "gut_archive";
     int opt_fast = 1;
     int r = 0;
     ucl_bytep buf = NULL;
     ucl_uint buf_len;
-    unsigned char m [ sizeof(UCL_MAGIC) ];
+    unsigned char m[sizeof(UCL_MAGIC)];
     ucl_uint32 flags;
     int method;
     int level;
     ucl_uint block_size;
     ucl_uint32 checksum;
     ucl_uint overhead = 0;
+    char header[16];
+    header[0] = 0;
+    char file_extension[6];
+    char output_filename[256];
 
     total_in = total_out = 0;
 
-/*
- * Step 1: check UCL_MAGIC header, read flags & block size, init checksum
- */
-    if (xread(fi,m,sizeof(UCL_MAGIC),1) != sizeof(UCL_MAGIC) ||
-        memcmp(m,UCL_MAGIC,sizeof(UCL_MAGIC)) != 0)
+    /*
+     * Step 1: check UCL_MAGIC header, read flags & block size, init checksum
+     */
+    if (xread(fi, m, sizeof(UCL_MAGIC), 1) != sizeof(UCL_MAGIC) ||
+        memcmp(m, UCL_MAGIC, sizeof(UCL_MAGIC)) != 0)
     {
         printf("%s: header error - this file is not compressed by uclpack\n", progname);
         r = 1;
@@ -175,30 +209,30 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops)
     if (overhead == 0 || !set_method_name(method, level))
     {
         printf("%s: header error - invalid method %d (level %d)\n",
-                progname, method, level);
+               progname, method, level);
         r = 2;
         goto err;
     }
-    if (block_size < 1024 || block_size > 8*1024*1024L)
+    if (block_size < 1024 || block_size > 8 * 1024 * 1024L)
     {
         printf("%s: header error - invalid block size %ld\n",
-                progname, (long) block_size);
+               progname, (long)block_size);
         r = 3;
         goto err;
     }
 
-    checksum = ucl_adler32(0,NULL,0);
+    checksum = ucl_adler32(0, NULL, 0);
 
-/*
- * Step 2: allocate buffer for in-place decompression
- */
+    /*
+     * Step 2: allocate buffer for in-place decompression
+     */
     buf_len = block_size + overhead;
     if (benchmark_loops > 0)
     {
         /* cannot use in-place decompression when doing benchmarks */
         buf_len += block_size;
     }
-    buf = (ucl_bytep) ucl_malloc(buf_len);
+    buf = (ucl_bytep)ucl_malloc(buf_len);
     if (buf == NULL)
     {
         printf("%s: out of memory\n", progname);
@@ -206,9 +240,9 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops)
         goto err;
     }
 
-/*
- * Step 3: process blocks
- */
+    /*
+     * Step 3: process blocks
+     */
     for (;;)
     {
         ucl_bytep in;
@@ -240,7 +274,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops)
         out = buf;
 
         /* read compressed block data */
-        xread(fi,in,in_len,0);
+        xread(fi, in, in_len, 0);
 
         if (in_len < out_len)
         {
@@ -249,35 +283,49 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops)
 
             if (method == 0x2b)
             {
-                r = ucl_nrv2b_decompress_le32(in,in_len,out,&new_len,NULL);
+                r = ucl_nrv2b_decompress_le32(in, in_len, out, &new_len, NULL);
             }
             else if (method == 0x2d)
             {
-                r = ucl_nrv2d_decompress_le32(in,in_len,out,&new_len,NULL);
+                r = ucl_nrv2d_decompress_le32(in, in_len, out, &new_len, NULL);
             }
             else if (method == 0x2e)
             {
-                r = ucl_nrv2e_decompress_le32(in,in_len,out,&new_len,NULL);
+                r = ucl_nrv2e_decompress_le32(in, in_len, out, &new_len, NULL);
             }
             if (r != UCL_E_OK || new_len != out_len)
             {
-                printf("%s: compressed data violation: error %d (0x%x: %ld/%ld/%ld)\n", progname, r, method, (long) in_len, (long) out_len, (long) new_len);
+                printf("%s: compressed data violation: error %d (0x%x: %ld/%ld/%ld)\n", progname, r, method, (long)in_len, (long)out_len, (long)new_len);
                 r = 6;
                 goto err;
             }
+            if(header[0] == 0)
+            {
+                fclose(fo);
+                memcpy(header, out, 16);
+                strncpy(file_extension, find_file_extension(header), 5);
+                sprintf(output_filename, "%s.%s", filename, file_extension);
+                fo = fopen(output_filename, "wb");
+                if (fo == NULL)
+                {
+                    perror("Failed to create output file");
+                    r = 1;
+                    goto err;
+                }
+            }
             /* write decompressed block */
-            xwrite(fo,out,out_len);
+            xwrite(fo, out, out_len);
             /* update checksum */
             if ((flags & 1) && !opt_fast)
-                checksum = ucl_adler32(checksum,out,out_len);
+                checksum = ucl_adler32(checksum, out, out_len);
         }
         else
         {
             /* write original (incompressible) block */
-            xwrite(fo,in,in_len);
+            xwrite(fo, in, in_len);
             /* update checksum */
             if ((flags & 1) && !opt_fast)
-                checksum = ucl_adler32(checksum,in,in_len);
+                checksum = ucl_adler32(checksum, in, in_len);
         }
     }
 
@@ -309,8 +357,10 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     ucl_uint actual_offset, actual_length;
     int file_index = 0;
     int r = -1;
-    BOOL compressed= TRUE;
+    BOOL compressed = TRUE;
     char filename[256];
+    char file_extension[6];
+    char file_header[16];
 
     toc_file = fopen(toc_filename, "rb");
     if (toc_file == NULL)
@@ -333,16 +383,16 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     xread(toc_file, &file_count, 4, 0);
     fseek(toc_file, 16, SEEK_SET);
 
-
 #ifdef _WIN32
     _mkdir(output_dir);
 #else
     mkdir(output_dir, 0700);
 #endif
-
+    printf("Extracting GUT Archive...\n");
     while (TRUE)
     {
-        if(file_index >= file_count){
+        if (file_index >= file_count)
+        {
             break;
         }
         xread(toc_file, &start_offset, 4, 0);
@@ -355,16 +405,20 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         actual_offset = start_offset * 0x800;
 
         char log_line[256];
-        sprintf(log_line, "File %d: TOC Offset: %08x, Mul. Offset: %08x, Compressed Size: %d, Length: %08x, Zero Check: %d, Decompressed Size: %d\n", file_index, start_offset,actual_offset, compressed_size, actual_length, zero_field, decompressed_size);
+        sprintf(log_line, "File %d: TOC Offset: %08x, Mul. Offset: %08x, Compressed Size: %d, Length: %08x, Zero Check: %d, Decompressed Size: %d\n", file_index, start_offset, actual_offset, compressed_size, actual_length, zero_field, decompressed_size);
         fwrite(log_line, 1, strlen(log_line), log);
 
-        if(zero_field == 1) {
+        if (zero_field == 1)
+        {
             file_index++;
             continue;
         }
-        if(decompressed_size == 0) {
+        if (decompressed_size == 0)
+        {
             compressed = FALSE;
-        }else{
+        }
+        else
+        {
             compressed = TRUE;
         }
 
@@ -381,8 +435,14 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
         xread(dat_file, compressed_file_data, actual_length, 0);
 
-        if(!compressed){
-            sprintf(filename, "%s/%08x.unc", output_dir, file_index);
+        if (!compressed)
+        {
+            file_header[0] = 0;
+            file_extension[0] = 0;
+            memcpy(file_header, compressed_file_data, 16);
+            strncpy(file_extension, find_file_extension(file_header), 5);
+
+            sprintf(filename, "%s/%08d.%s", output_dir, file_index, file_extension);
             FILE *output_file = fopen(filename, "wb");
             if (output_file == NULL)
             {
@@ -412,23 +472,18 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         xwrite(temp_compressed_file, compressed_file_data, actual_length);
         fseek(temp_compressed_file, 0, SEEK_SET);
 
-        
-        fseek(temp_compressed_file, 0, SEEK_SET);
-
-        sprintf(filename, "%s/%08x.ucl", output_dir, file_index);
-        FILE *output_file = fopen(filename, "wb");
+        FILE *output_file;
+        output_file = tmpfile();
         if (output_file == NULL)
         {
-            perror("Failed to create output file");
+            perror("Failed to create temporary file");
             fclose(toc_file);
             fclose(dat_file);
             free(compressed_file_data);
             return EXIT_FAILURE;
         }
-
-        /*TODO: decomp and save with ucl*/
-        r = do_decompress(temp_compressed_file, output_file, 0);
-        
+        sprintf(filename, "%s/%08d", output_dir, file_index);
+        r = do_decompress(temp_compressed_file, output_file, 0, filename);
         fclose(temp_compressed_file);
         if (r != 0)
         {
@@ -443,7 +498,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         free(compressed_file_data);
         file_index++;
     }
-    printf("Decompression complete\n");
+    printf("Files extracted and decompressed successfully\n");
     fclose(toc_file);
     fclose(dat_file);
     fclose(log);
