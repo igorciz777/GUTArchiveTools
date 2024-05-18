@@ -331,7 +331,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     /*TODO: do something with the first 4 values instead of skipping
     fseek(toc_file, 16, SEEK_SET);*/
     xread(toc_file, &file_count, 4, 0);
-    fseek(toc_file, 12, SEEK_SET);
+    fseek(toc_file, 16, SEEK_SET);
 
 
 #ifdef _WIN32
