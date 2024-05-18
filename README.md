@@ -15,9 +15,11 @@ gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directo
 - Recompression not implemented yet
 - Lacks proper error handling in many places
 - Lacks options regarding creating a .log
+- Possible issues with building on both platforms
 
 ## Building
 ### Windows
+Tested only with mingw gcc
 ```shell
 gcc -Wall -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
 ```
