@@ -10,6 +10,12 @@ gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directo
 ## Known compatible games
 - RACING BATTLE -C1 GRAND PRIX-
 
+## Current issues
+- Everything is saved into a generic file type
+- Recompression not implemented yet
+- Lacks proper error handling in many places
+- Lacks options regarding creating a .log
+
 ## Building
 ### Windows
 ```shell
