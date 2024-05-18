@@ -249,24 +249,15 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops)
 
             if (method == 0x2b)
             {
-                if (opt_fast)
-                    r = ucl_nrv2b_decompress_le32(in,in_len,out,&new_len,NULL);
-                else
-                    r = ucl_nrv2b_decompress_safe_le32(in,in_len,out,&new_len,NULL);
+                r = ucl_nrv2b_decompress_le32(in,in_len,out,&new_len,NULL);
             }
             else if (method == 0x2d)
             {
-                if (opt_fast)
-                    r = ucl_nrv2d_decompress_8(in,in_len,out,&new_len,NULL);
-                else
-                    r = ucl_nrv2d_decompress_safe_8(in,in_len,out,&new_len,NULL);
+                r = ucl_nrv2d_decompress_le32(in,in_len,out,&new_len,NULL);
             }
             else if (method == 0x2e)
             {
-                if (opt_fast)
-                    r = ucl_nrv2e_decompress_8(in,in_len,out,&new_len,NULL);
-                else
-                    r = ucl_nrv2e_decompress_safe_8(in,in_len,out,&new_len,NULL);
+                r = ucl_nrv2e_decompress_le32(in,in_len,out,&new_len,NULL);
             }
             if (r != UCL_E_OK || new_len != out_len)
             {
@@ -312,6 +303,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 {
     FILE *toc_file, *dat_file;
     FILE *log;
+    ucl_uint file_count;
     ucl_uint start_offset, compressed_size, length_in_dat, zero_field, decompressed_size;
     ucl_uint new_len;
     ucl_uint actual_offset, actual_length;
@@ -336,8 +328,11 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
     log = fopen("decomp.log", "w");
 
-    /*TODO: do something with the first 4 values instead of skipping*/
-    fseek(toc_file, 16, SEEK_SET);
+    /*TODO: do something with the first 4 values instead of skipping
+    fseek(toc_file, 16, SEEK_SET);*/
+    xread(toc_file, &file_count, 4, 0);
+    fseek(toc_file, 12, SEEK_SET);
+
 
 #ifdef _WIN32
     _mkdir(output_dir);
@@ -347,6 +342,9 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
     while (TRUE)
     {
+        if(file_index >= file_count){
+            break;
+        }
         xread(toc_file, &start_offset, 4, 0);
         xread(toc_file, &compressed_size, 4, 0);
         xread(toc_file, &length_in_dat, 4, 0);
