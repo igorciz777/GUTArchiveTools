@@ -30,6 +30,7 @@ For TXR:D2
 - Fu-un Shinsengumi (SLKA-25139)
 - RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) (SLPM-61115)
 - Street Supremacy (ULUS-10069)
+- Shutokou Battle 01 (SLPM-65308) (SLPM-60206)
 - Tokyo Xtreme Racer 3 (SLUS-20831)
 - Tokyo Xtreme Racer Drift (SLUS-21236)
 
@@ -38,7 +39,10 @@ For TXR:D2
 - Kaido Racer 2 (SLES-53900) - same as txrd2 but different file count
 - Kaidou Battle - Touge no Densetsu (SLPM-61121) - same as txrd2 but different file count
 - Kaidou Battle 2 - Chain Reaction (SLPM-60228) - weird misalignment after 10th file in toc, exports files still UCL compressed
-- Kaidou Battle 1 Taikenban Demo (SLPM-60195) - very weird toc file contents, doesnt export anything
+- Kaidou Battle 1 Taikenban Demo (SLPM-60195) - very weird toc file contents, does not export anything
+- Ninkyouden: Toseinin Ichidaiki (SLPM-61144) - similar to txrd2, -0 to extract some files
+- Wangan Midnight Portable (ULJM-05264) - similar to txrd2, -0 to extract some files
+- Import Tuner Challenge - uses big endian, not supported yet
 
 ## Current issues
 - Very few file types are defined
