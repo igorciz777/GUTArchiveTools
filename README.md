@@ -15,7 +15,7 @@ gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directo
 - Tokyo Xtreme Racer 3 (SLUS-20831)
 
 ## Known incompatible games
-- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc ofssets get weirdly mixed up towards the end
+- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc offsets get weirdly mixed up towards the end
 
 ## Current issues
 - Everything is saved into a generic file type
