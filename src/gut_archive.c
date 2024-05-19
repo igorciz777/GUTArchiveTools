@@ -11,6 +11,8 @@
 static unsigned long total_in = 0;
 static unsigned long total_out = 0;
 
+static int gameid = -1;
+
 static ucl_uint get_overhead(int method, ucl_uint size)
 {
     if (method == 0x2b || method == 0x2d || method == 0x2e)
@@ -347,6 +349,14 @@ err:
     return r;
 }
 
+void usage(const char *progname)
+{
+    printf("Usage: %s [-r tocFile inDirectory outputDirectory] [-d tocFile datFile outputDirectory] -0\n", progname);
+    printf("  -r tocFile inDirectory outputDirectory: rebuild the archive from the files in inDirectory\n");
+    printf("  -d tocFile datFile outputDirectory: decompress and output the archive\n");
+    printf("  -0,...,-5: switch between compatible games\n");
+}
+
 int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *output_dir)
 {
     FILE *toc_file, *dat_file;
@@ -361,6 +371,8 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     char filename[256];
     char file_extension[6];
     char file_header[16];
+
+    
 
     toc_file = fopen(toc_filename, "rb");
     if (toc_file == NULL)
@@ -395,11 +407,25 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         {
             break;
         }
-        xread(toc_file, &start_offset, 4, 0);
-        xread(toc_file, &compressed_size, 4, 0);
-        xread(toc_file, &length_in_dat, 4, 0);
-        xread(toc_file, &zero_field, 4, 0);
-        xread(toc_file, &decompressed_size, 4, 0);
+        /*experimental switch for different games*/
+        switch(gameid){
+            case 0: /*TXR:D2*/
+                xread(toc_file, &start_offset, 4, 0);
+                xread(toc_file, &compressed_size, 4, 0);
+                xread(toc_file, &decompressed_size, 4, 0);
+                xread(toc_file, &zero_field, 4, 0);
+                xread(toc_file, &length_in_dat, 4, 0);
+                length_in_dat = length_in_dat - start_offset;
+                fseek(toc_file, -4, SEEK_CUR);
+                break;
+            default:
+                xread(toc_file, &start_offset, 4, 0);
+                xread(toc_file, &compressed_size, 4, 0);
+                xread(toc_file, &length_in_dat, 4, 0);
+                xread(toc_file, &zero_field, 4, 0);
+                xread(toc_file, &decompressed_size, 4, 0);
+                break;
+        }
 
         actual_length = length_in_dat * 0x800;
         actual_offset = start_offset * 0x800;
@@ -514,7 +540,7 @@ int __acc_cdecl_main main(int argc, char *argv[])
     if (argc < 2)
     {
         printf("Error: Insufficient arguments\n");
-        printf("Usage: %s [-r directory] [-d tocFile datFile outputDirectory]\n", argv[0]);
+        usage(argv[0]);
         return 1;
     }
     if (ucl_init() != UCL_E_OK)
@@ -523,15 +549,23 @@ int __acc_cdecl_main main(int argc, char *argv[])
         return 1;
     }
 
+
     if (strcmp(argv[1], "-r") == 0)
     {
-        if (argc < 3)
+        if (argc < 5)
         {
             printf("Error: Insufficient arguments\n");
-            printf("Usage: %s [-r directory] [-d tocFile datFile outputDirectory]\n", argv[0]);
+            usage(argv[0]);
             return 1;
         }
-        strncpy(directory, argv[2], 255);
+        strncpy(toc_file, argv[2], 255);
+        strncpy(directory, argv[3], 255);
+        strncpy(output_dir, argv[4], 255);
+        if(argc > 5){
+            char game[3];
+            strncpy(game, argv[5], 2);
+            gameid = atoi(game);
+            }
         mode = 'r';
     }
     else if (strcmp(argv[1], "-d") == 0)
@@ -539,19 +573,24 @@ int __acc_cdecl_main main(int argc, char *argv[])
         if (argc < 5)
         {
             printf("Error: Insufficient arguments\n");
-            printf("Usage: %s [-r directory] [-d tocFile datFile outputDirectory]\n", argv[0]);
+            usage(argv[0]);
             return 1;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
         strncpy(output_dir, argv[4], 255);
+        if(argc > 5){
+            char game[3];
+            strncpy(game, argv[5], 2);
+            gameid = atoi(game);
+            }
         mode = 'd';
         result = decompress_GUT_Archive(toc_file, dat_file, output_dir);
     }
     else
     {
         printf("Error: Invalid arguments\n");
-        printf("Usage: %s [-r directory] [-d tocFile datFile outputDirectory]\n", argv[0]);
+        usage(argv[0]);
         return 1;
     }
 
