@@ -23,21 +23,24 @@ For TXR:D2
 .\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -0
 ```
 
-
 ## Known compatible games
-- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) 
 - Fu-un Bakumatsu-den (SLPM-61096)
+- Fu-un Shinsengumi (SLKA-25139)
+- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897)
+- Street Supremacy (ULUS-10069)
 - Tokyo Xtreme Racer 3 (SLUS-20831)
 
 ## Known incompatible games
 - Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc offsets get weirdly mixed up towards the end, use -0 to extract some available files
+- Kaido Racer 2 (SLES-53900) - same as txrd2 but different file count
 
 ## Current issues
-- Everything is saved into a generic file type
-- Recompression not implemented yet
+- Very few file types are defined
+- Re-inserting files back corrupts the archive
 - Lacks proper error handling in many places
 - Lacks options regarding creating a .log
 - Possible issues with building on both platforms
+- Code is a spaghetti mess
 
 ## Building
 ### Windows
