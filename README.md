@@ -6,12 +6,16 @@ This program is an attempt to reverse engineer the archive to allow file modding
 
 ## Usage
 ```shell
-gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directory> <Output Directory>]
+gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directory> <Output Directory>] [-0,...,-5]
 ```
 
 ## Known compatible games
-- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897)
+- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) 
 - Fu-un Bakumatsu-den (SLPM-61096)
+- Tokyo Xtreme Racer 3 (SLUS-20831)
+
+## Known incompatible games
+- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc ofssets get weirdly mixed up towards the end
 
 ## Current issues
 - Everything is saved into a generic file type
