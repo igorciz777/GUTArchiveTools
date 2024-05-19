@@ -4,15 +4,6 @@ This archive was used in games made around 2003-2006.
 
 This program is an attempt to reverse engineer the archive to allow file modding
 
-
-/*void usage(const char *progname)
-{
-    printf("Usage: %s [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0\n", progname);
-    printf("  -r tocFile datFile inDirectory: rebuild files in inDirectory into datFile\n");
-    printf("  -d tocFile datFile outputDirectory: decompress and output the archive to outputDirectory\n");
-    printf("  -0,...: switch between compatible games (optional, use only if stated in compatible game list)\n");
-    printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
-}*/
 ## Usage
 ```shell
 gut_archive.exe/.out [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0,...
