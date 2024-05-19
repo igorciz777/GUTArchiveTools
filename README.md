@@ -18,6 +18,7 @@ gut_archive.exe/.out [-r tocFile datFile inDirectory] [-d tocFile datFile output
 ```shell
 .\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT
 ```
+For TXR:D2
 ```shell
 .\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -0
 ```
