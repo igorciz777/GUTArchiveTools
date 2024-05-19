@@ -16,10 +16,10 @@ gut_archive.exe/.out [-r tocFile datFile inDirectory] [-d tocFile datFile output
 
 ### Examples
 ```shell
-\.\gut_archive.exe -d .\\BUILD.TOC .\\BUILD.DAT BUILD_OUT
+.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT
 ```
 ```shell
-\.\gut_archive.exe -d .\\BUILD.TOC .\\BUILD.DAT BUILD_OUT -0
+.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -0
 ```
 
 
