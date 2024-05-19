@@ -44,7 +44,7 @@ static char *find_file_extension(const char *file_header)
     {
         return "xvi";
     }
-    else if (memcmp(file_header, TIM2, 8) == 0)
+    else if (memcmp(file_header, TIM2, 4) == 0)
     {
         return "tm2";
         /*}else if(memcmp(file_header, XMDL, 8) == 0){
@@ -215,7 +215,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
         r = 2;
         goto err;
     }
-    if (block_size < 1024 || block_size > 8 * 1024 * 1024L)
+    if (block_size < 32 || block_size > 32 * 1024 * 1024L)
     {
         printf("%s: header error - invalid block size %ld\n",
                progname, (long)block_size);
@@ -415,6 +415,12 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
                 xread(toc_file, &decompressed_size, 4, 0);
                 xread(toc_file, &zero_field, 4, 0);
                 xread(toc_file, &length_in_dat, 4, 0);
+                if(length_in_dat == 0)
+                {
+                    fseek(toc_file, -4, SEEK_CUR);
+                    zero_field = 1;
+                    break;
+                }
                 length_in_dat = length_in_dat - start_offset;
                 fseek(toc_file, -4, SEEK_CUR);
                 break;
@@ -429,6 +435,11 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
         actual_length = length_in_dat * 0x800;
         actual_offset = start_offset * 0x800;
+
+        if(actual_offset == 0 && file_index > 1 && gameid == 0)
+        {
+            zero_field = 1;
+        }
 
         char log_line[256];
         sprintf(log_line, "File %d: TOC Offset: %08x, Mul. Offset: %08x, Compressed Size: %d, Length: %08x, Zero Check: %d, Decompressed Size: %d\n", file_index, start_offset, actual_offset, compressed_size, actual_length, zero_field, decompressed_size);
