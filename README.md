@@ -38,3 +38,4 @@ gcc -Wall -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.out -Iinclud
 
 ## Credits
 - [**UCL**](https://www.oberhumer.com/opensource/ucl/) - Used for decompression.
+- [**dirent for Windows**](https://github.com/tronkko/dirent) - Used for directory listing on Windows.
