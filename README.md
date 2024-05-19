@@ -26,13 +26,14 @@ For TXR:D2
 ## Known compatible games
 - Fu-un Bakumatsu-den (SLPM-61096)
 - Fu-un Shinsengumi (SLKA-25139)
-- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897)
+- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) (SLPM-61115)
 - Street Supremacy (ULUS-10069)
 - Tokyo Xtreme Racer 3 (SLUS-20831)
 
 ## Known incompatible games
 - Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc offsets get weirdly mixed up towards the end, use -0 to extract some available files
 - Kaido Racer 2 (SLES-53900) - same as txrd2 but different file count
+- Kaidou Battle 2 - Chain Reaction (SLPM-60228) - weird misalignment after 10th file in toc, exports files still UCL compressed
 
 ## Current issues
 - Very few file types are defined
