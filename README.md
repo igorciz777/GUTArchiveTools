@@ -4,10 +4,33 @@ This archive was used in games made around 2003-2006.
 
 This program is an attempt to reverse engineer the archive to allow file modding
 
+
+/*void usage(const char *progname)
+{
+    printf("Usage: %s [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0\n", progname);
+    printf("  -r tocFile datFile inDirectory: rebuild files in inDirectory into datFile\n");
+    printf("  -d tocFile datFile outputDirectory: decompress and output the archive to outputDirectory\n");
+    printf("  -0,...: switch between compatible games (optional, use only if stated in compatible game list)\n");
+    printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
+}*/
 ## Usage
 ```shell
-gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directory> <Output Directory>] [-0,...,-5]
+gut_archive.exe/.out [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0,...
 ```
+### Options
+- -r: Rebuild files in inDirectory into datFile
+- -d: Decompress and output the archive to outputDirectory
+- -0,...: Switch between compatible games (optional, use only if stated in compatible game list)
+    - -0: Tokyo Xtreme Racer DRIFT 2
+
+### Examples
+```shell
+\.\gut_archive.exe -d .\\BUILD.TOC .\\BUILD.DAT BUILD_OUT
+```
+```shell
+\.\gut_archive.exe -d .\\BUILD.TOC .\\BUILD.DAT BUILD_OUT -0
+```
+
 
 ## Known compatible games
 - RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) 
@@ -15,7 +38,7 @@ gut_archive.exe [-d <TOC File> <DAT File> <Output Directory>] [-r <Input Directo
 - Tokyo Xtreme Racer 3 (SLUS-20831)
 
 ## Known incompatible games
-- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc offsets get weirdly mixed up towards the end
+- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc offsets get weirdly mixed up towards the end, use -0 to extract some available files
 
 ## Current issues
 - Everything is saved into a generic file type

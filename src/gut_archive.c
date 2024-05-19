@@ -8,7 +8,7 @@
 #include <dirent.h>
 #include <stdio.h>
 
-#define TEMP_DIR "temp"
+#define REBUILDING_ALLOWED 0
 
 static unsigned long total_in = 0;
 static unsigned long total_out = 0;
@@ -942,6 +942,10 @@ int __acc_cdecl_main main(int argc, char *argv[])
         strncpy(dat_file, argv[3], 255);
         strncpy(directory, argv[4], 255);
         mode = 'r';
+        if(REBUILDING_ALLOWED == 0){
+            printf("Rebuilding is disabled in this release, still in development\n");
+            return 1;
+        }
         result = rebuild_GUT_Archive(toc_file, dat_file, directory);
     }
     else if (strcmp(argv[1], "-d") == 0)
