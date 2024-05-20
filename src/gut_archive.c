@@ -491,6 +491,7 @@ void usage(const char *progname)
     printf("  -0,...: switch between compatible games (optional, use only if stated in compatible game list)\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
     printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
+    printf("    -2: Import Tuner Challenge\n");
 }
 
 int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *output_dir)
@@ -558,6 +559,23 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             length_in_dat = length_in_dat - start_offset;
             fseek(toc_file, -4, SEEK_CUR);
             break;
+        case -2: /*ITC Big endian*/
+            xread(toc_file, &start_offset, 4, 0);
+            xread(toc_file, &compressed_size, 4, 0);
+            compressed_size = swap_uint32(compressed_size);
+            xread(toc_file, &decompressed_size, 4, 0);
+            decompressed_size = swap_uint32(decompressed_size);
+            xread(toc_file, &zero_field, 4, 0);
+            xread(toc_file, &length_in_dat, 4, 0);
+            if (length_in_dat == 0)
+            {
+                fseek(toc_file, -4, SEEK_CUR);
+                zero_field = 1;
+                break;
+            }
+            length_in_dat = length_in_dat - start_offset;
+            fseek(toc_file, -4, SEEK_CUR);
+            break;
         default:
             xread(toc_file, &start_offset, 4, 0);
             xread(toc_file, &compressed_size, 4, 0);
@@ -569,6 +587,10 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
         actual_length = length_in_dat * 0x800;
         actual_offset = start_offset * 0x800;
+        if(gameid == -2){
+            actual_offset = swap_uint32(start_offset) * 0x800;
+            actual_length = swap_uint32(length_in_dat) * 0x800;
+        }
 
         if (actual_offset == 0 && file_index > 1 && gameid == 0)
         {

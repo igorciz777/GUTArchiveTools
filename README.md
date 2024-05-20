@@ -30,7 +30,7 @@ For TXR:D2
 - Fu-un Bakumatsu-den (SLPM-61096)
 - Fu-un Shinsengumi (SLKA-25139)
 - RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) (SLPM-61115)
-- Street Supremacy (ULUS-10069)
+- Street Supremacy (ULUS-10069) - no file types defined yet
 - Shutokou Battle 01 (SLPM-65308) (SLPM-60206), use -1 to skip a duped block of data in file id 1 (only in release version, demo works with default)
 - Tokyo Xtreme Racer 3 (SLUS-20831), use -1 to skip a duped block of data in file id 1
 - Tokyo Xtreme Racer Drift (SLUS-21236)
@@ -43,7 +43,7 @@ For TXR:D2
 - Kaidou Battle 1 Taikenban Demo (SLPM-60195) - very weird toc file contents, does not export anything
 - Ninkyouden: Toseinin Ichidaiki (SLPM-61144) - similar to txrd2, -0 to extract some files
 - Wangan Midnight Portable (ULJM-05264) - similar to txrd2, -0 to extract some files
-- Import Tuner Challenge - uses big endian, not supported yet
+- Import Tuner Challenge - experimental support with -2, no file types defined yet
 
 ## Current issues
 - Very few file types are defined
