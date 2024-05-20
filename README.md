@@ -13,6 +13,7 @@ gut_archive.exe/.out [-r tocFile datFile inDirectory] [-d tocFile datFile output
 - -d: Decompress and output the archive to outputDirectory
 - -0,...: Switch between compatible games (optional, use only if stated in compatible game list)
     - -0: Tokyo Xtreme Racer DRIFT 2
+    - -1: Tokyo Xtreme Racer 3, Shutokou Battle 01
 
 ### Examples
 ```shell
@@ -30,8 +31,8 @@ For TXR:D2
 - Fu-un Shinsengumi (SLKA-25139)
 - RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) (SLPM-61115)
 - Street Supremacy (ULUS-10069)
-- Shutokou Battle 01 (SLPM-65308) (SLPM-60206)
-- Tokyo Xtreme Racer 3 (SLUS-20831)
+- Shutokou Battle 01 (SLPM-65308) (SLPM-60206), use -1 to skip a duped block of data in file id 1 (only in release version, demo works with default)
+- Tokyo Xtreme Racer 3 (SLUS-20831), use -1 to skip a duped block of data in file id 1
 - Tokyo Xtreme Racer Drift (SLUS-21236)
 
 ## Known incompatible games

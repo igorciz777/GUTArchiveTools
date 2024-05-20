@@ -8,12 +8,12 @@
 #include <dirent.h>
 #include <stdio.h>
 
-#define REBUILDING_ALLOWED 0
+#define REBUILDING_ALLOWED 1
 
 static unsigned long total_in = 0;
 static unsigned long total_out = 0;
 
-static int gameid = -1;
+static int gameid = 1;
 
 static ucl_uint get_overhead(int method, ucl_uint size)
 {
@@ -577,11 +577,12 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         sprintf(log_line, "File %d: TOC Offset: %08x, Mul. Offset: %08x, Compressed Size: %d, Length: %08x, Zero Check: %d, Decompressed Size: %d\n", file_index, start_offset, actual_offset, compressed_size, actual_length, zero_field, decompressed_size);
         fwrite(log_line, 1, strlen(log_line), log);
 
-        if (zero_field == 1)
+        if (zero_field == 1 || (gameid == -1 && file_index == 1))
         {
             file_index++;
             continue;
         }
+    
         if (decompressed_size == 0)
         {
             compressed = FALSE;
