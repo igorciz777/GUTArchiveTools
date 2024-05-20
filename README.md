@@ -47,7 +47,7 @@ For TXR:D2
 
 ## Current issues
 - Very few file types are defined
-- Re-inserting files back corrupts the archive
+- Many games still incompatible
 - Lacks proper error handling in many places
 - Lacks options regarding creating a .log
 - Possible issues with building on both platforms
