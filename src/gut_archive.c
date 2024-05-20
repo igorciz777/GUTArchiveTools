@@ -9,7 +9,7 @@
 #include <stdio.h>
 
 #define REBUILDING_ALLOWED 1
-#define REBUILDING_DEBUG 1
+#define REBUILDING_DEBUG 0
 
 static unsigned long total_in = 0;
 static unsigned long total_out = 0;
