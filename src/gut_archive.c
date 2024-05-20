@@ -8,6 +8,7 @@
 
 #include "include/portab.h"
 #include "include/gnk_headers.h"
+#include "include/ucl/ucl_endian.h"
 
 /*debug switches*/
 #define REBUILDING_ALLOWED 1
@@ -53,28 +54,6 @@ static ucl_bool set_method_name(int method, int level)
     else
         return 0;
     return 1;
-}
-
-ucl_uint swap_uint16(ucl_uint val)
-{
-    return (val << 8) | (val >> 8);
-}
-
-ucl_int swap_int16(ucl_int val)
-{
-    return (val << 8) | ((val >> 8) & 0xFF);
-}
-
-ucl_uint32 swap_uint32(ucl_uint32 val)
-{
-    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
-    return (val << 16) | (val >> 16);
-}
-
-ucl_int32 swap_int32(ucl_int32 val)
-{
-    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
-    return (val << 16) | ((val >> 16) & 0xFFFF);
 }
 
 ucl_uint xwrite(FILE *f, const ucl_voidp buf, ucl_uint len)
@@ -149,11 +128,6 @@ void xputc(FILE *f, int c)
 {
     unsigned char cc = (unsigned char)c;
     xwrite(f, (const ucl_voidp)&cc, 1);
-}
-
-int swap32(int v)
-{
-    return ((v & 0xff) << 24) | ((v & 0xff00) << 8) | ((v & 0xff0000) >> 8) | ((v & 0xff000000) >> 24);
 }
 
 /*TODO: taken straight from uclpack, needs a lighter alternative rewrite*/
@@ -332,7 +306,7 @@ err:
     ucl_free(buf);
     return r;
 }
-/*taken from uclpack*/
+/*TODO: taken straight from uclpack, needs a lighter alternative rewrite*/
 int do_compress(FILE *fi, FILE *fo, int method, int level, ucl_uint block_size)
 {
     int r = 0;
@@ -355,7 +329,6 @@ int do_compress(FILE *fi, FILE *fo, int method, int level, ucl_uint block_size)
     cfg.c_flags = 0;
 
     total_in = total_out = 0;
-    
 
     /*
      * Step 1: write UCL_MAGIC header, flags & block size, init checksum
@@ -445,17 +418,6 @@ err:
     ucl_free(out);
     ucl_free(in);
     return r;
-}
-
-void usage(const char *progname)
-{
-    printf("Usage: %s [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0\n", progname);
-    printf("  -r tocFile datFile inDirectory: rebuild files in inDirectory into datFile\n");
-    printf("  -d tocFile datFile outputDirectory: decompress and output the archive to outputDirectory\n");
-    printf("  -0,...: switch between compatible games (optional, use only if stated in compatible game list)\n");
-    printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
-    printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
-    printf("    -2: Import Tuner Challenge\n");
 }
 
 int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *output_dir)
@@ -738,6 +700,23 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             length_in_dat = length_in_dat - start_offset;
             fseek(toc_file, -4, SEEK_CUR);
             break;
+        case -2: /*ITC Big endian*/
+            xread(toc_file, &start_offset, 4, 0);
+            xread(toc_file, &compressed_size, 4, 0);
+            compressed_size = swap_uint32(compressed_size);
+            xread(toc_file, &decompressed_size, 4, 0);
+            decompressed_size = swap_uint32(decompressed_size);
+            xread(toc_file, &zero_field, 4, 0);
+            xread(toc_file, &length_in_dat, 4, 0);
+            if (length_in_dat == 0)
+            {
+                fseek(toc_file, -4, SEEK_CUR);
+                zero_field = 1;
+                break;
+            }
+            length_in_dat = length_in_dat - start_offset;
+            fseek(toc_file, -4, SEEK_CUR);
+            break;
         default:
             xread(toc_file, &start_offset, 4, 0);
             xread(toc_file, &compressed_size, 4, 0);
@@ -748,6 +727,11 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         }
 
         actual_offset = start_offset * 0x800;
+
+        if(gameid == -2)
+        {
+            actual_offset = swap_uint32(start_offset) * 0x800;
+        }
 
         if (zero_field == 1)
         {
@@ -840,6 +824,32 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             files[file_index].compressed_size = new_decompressed_size;
             free(uncompressed_file_data);
             fclose(input_file);
+
+            /*write changes to .toc*/
+            fseek(toc_file, 0, SEEK_SET);
+            fseek(toc_file, 16, SEEK_SET);
+            switch (gameid)
+            {
+            case 0:
+                fseek(toc_file, file_index * 16, SEEK_CUR);
+                fseek(toc_file, 4, SEEK_CUR);
+                xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
+                fseek(toc_file, 8, SEEK_CUR);
+                break;
+            case -2:
+                fseek(toc_file, file_index * 16, SEEK_CUR);
+                fseek(toc_file, 4, SEEK_CUR);
+                xwrite32(toc_file, files[file_index].compressed_size);
+                fseek(toc_file, 8, SEEK_CUR);
+                break;
+            default:
+                fseek(toc_file, file_index * 20, SEEK_CUR);
+                fseek(toc_file, 4, SEEK_CUR);
+                xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
+                fseek(toc_file, 12, SEEK_CUR);
+                break;
+            }
+            /*write to log*/
             char log_line[256];
             sprintf(log_line, "Uncompressed File %d, TOC offset %08x, DAT offset %08x, new size %d\n", file_index, files[file_index].start_offset, actual_offset, files[file_index].compressed_size);
             fwrite(log_line, 1, strlen(log_line), log);
@@ -905,6 +915,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         fseek(dat_file, 0, SEEK_SET);
         fseek(dat_file, actual_offset, SEEK_CUR);
         xwrite(dat_file, compressed_file_data, new_len);
+
 #if REBUILDING_DEBUG == 1
         xwrite(debug_file, compressed_file_data, new_len);
 #endif
@@ -913,6 +924,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
         fclose(input_file);
         fclose(temp_compressed_file);
+
 #if REBUILDING_DEBUG == 1
         fclose(debug_file);
 #endif
@@ -929,15 +941,22 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             xwrite32(toc_file, swap_uint32(files[file_index].decompressed_size));
             fseek(toc_file, 4, SEEK_CUR);
             break;
+        case -2:
+            fseek(toc_file, file_index * 16, SEEK_CUR);
+            fseek(toc_file, 4, SEEK_CUR);
+            xwrite32(toc_file, files[file_index].compressed_size);
+            xwrite32(toc_file, files[file_index].decompressed_size);
+            fseek(toc_file, 4, SEEK_CUR);
+            break;
         default:
             fseek(toc_file, file_index * 20, SEEK_CUR);
             fseek(toc_file, 4, SEEK_CUR);
             xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
-            fseek(toc_file, 4, SEEK_CUR);
-            fseek(toc_file, 4, SEEK_CUR);
+            fseek(toc_file, 8, SEEK_CUR);
             xwrite32(toc_file, swap_uint32(files[file_index].decompressed_size));
             break;
         }
+        /*write to log*/
         char log_line[256];
         sprintf(log_line, "Compressed File %d, TOC offset %08x, DAT offset %08x, New compressed size: %d, New decompressed size: %d\n", file_index, files[file_index].start_offset, actual_offset, files[file_index].compressed_size, files[file_index].decompressed_size);
         fwrite(log_line, 1, strlen(log_line), log);
@@ -952,6 +971,19 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     closedir(dir);
     return EXIT_SUCCESS;
 }
+
+
+void usage(const char *progname)
+{
+    printf("Usage: %s [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0\n", progname);
+    printf("  -r tocFile datFile inDirectory: rebuild files in inDirectory into datFile\n");
+    printf("  -d tocFile datFile outputDirectory: decompress and output the archive to outputDirectory\n");
+    printf("  -0,...: switch between compatible games (optional, use only if stated in compatible game list)\n");
+    printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
+    printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
+    printf("    -2: Import Tuner Challenge\n");
+}
+
 int __acc_cdecl_main main(int argc, char *argv[])
 {
     char toc_file[256], dat_file[256], output_dir[256], directory[256];
