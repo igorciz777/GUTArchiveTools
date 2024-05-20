@@ -17,8 +17,10 @@ static unsigned long total_in = 0;
 static unsigned long total_out = 0;
 
 static char method_name[64];
+static char progname[] = "gut_archive";
 
 static int gameid = 1;
+static ucl_uint opt_fast = 1;
 
 typedef struct
 {
@@ -157,23 +159,22 @@ int swap32(int v)
 /*TODO: taken straight from uclpack, needs a lighter alternative rewrite*/
 int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char *filename)
 {
-    char progname[] = "gut_archive";
-    int opt_fast = 1;
-    int r = 0;
-    ucl_bytep buf = NULL;
-    ucl_uint buf_len;
-    unsigned char m[sizeof(UCL_MAGIC)];
-    ucl_uint32 flags;
+    int r;
     int method;
     int level;
+    ucl_uint buf_len;
     ucl_uint block_size;
-    ucl_uint32 checksum;
     ucl_uint overhead = 0;
+    ucl_uint32 checksum;
+    ucl_uint32 flags;
+    ucl_bytep buf = NULL;
     char header[16];
-    header[0] = 0;
     char file_extension[6];
     char output_filename[256];
+    unsigned char m[sizeof(UCL_MAGIC)];
 
+    r = 0;
+    header[0] = 0;
     total_in = total_out = 0;
 
     /*
@@ -331,16 +332,10 @@ err:
     ucl_free(buf);
     return r;
 }
-
-/*************************************************************************
-// compress, also taken from uclpack
-**************************************************************************/
-
+/*taken from uclpack*/
 int do_compress(FILE *fi, FILE *fo, int method, int level, ucl_uint block_size)
 {
     int r = 0;
-    int opt_fast = 1;
-    char progname[] = "gut_archive";
     ucl_bytep in = NULL;
     ucl_bytep out = NULL;
     ucl_uint in_len;
@@ -360,6 +355,7 @@ int do_compress(FILE *fi, FILE *fo, int method, int level, ucl_uint block_size)
     cfg.c_flags = 0;
 
     total_in = total_out = 0;
+    
 
     /*
      * Step 1: write UCL_MAGIC header, flags & block size, init checksum
