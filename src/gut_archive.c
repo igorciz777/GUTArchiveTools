@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #define REBUILDING_ALLOWED 1
+#define REBUILDING_DEBUG 1
 
 static unsigned long total_in = 0;
 static unsigned long total_out = 0;
@@ -489,6 +490,7 @@ void usage(const char *progname)
     printf("  -d tocFile datFile outputDirectory: decompress and output the archive to outputDirectory\n");
     printf("  -0,...: switch between compatible games (optional, use only if stated in compatible game list)\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
+    printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
 }
 
 int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *output_dir)
@@ -685,13 +687,14 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     
     ucl_uint file_count;
     ucl_uint start_offset, compressed_size, length_in_dat, zero_field, decompressed_size;
-    ucl_uint actual_offset, actual_length;
+    ucl_uint actual_offset;
+    ucl_uint32 new_len, new_decompressed_size;
     int file_index = 0;
     int r = -1;
 
     build_file *files;
 
-    toc_file = fopen(toc_filename, "rb");
+    toc_file = fopen(toc_filename, "r+b");
     if (toc_file == NULL)
     {
         perror("Failed to open .toc file");
@@ -757,7 +760,6 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             break;
         }
 
-        actual_length = length_in_dat * 0x800;
         actual_offset = start_offset * 0x800;
 
         if (zero_field == 1)
@@ -808,7 +810,6 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             continue;
         }
 
-        actual_length = files[file_index].length_in_dat * 0x800;
         actual_offset = files[file_index].start_offset * 0x800;
 
         if (files[file_index].zero_field == 1)
@@ -820,7 +821,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         char infilename[1024];
         sprintf(infilename, "%s/%s", input_dir, entry->d_name);
 
-        FILE *input_file = fopen(infilename, "rb");
+        FILE *input_file = fopen(infilename, "r+b");
         
         if (input_file == NULL)
         {
@@ -831,9 +832,13 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             return EXIT_FAILURE;
         }
 
+        fseek(input_file, 0, SEEK_END);
+        new_decompressed_size = ftell(input_file);
+        fseek(input_file, 0, SEEK_SET);
+
         if(!files[file_index].compressed){
             fseek(dat_file, actual_offset, SEEK_SET);
-            char *uncompressed_file_data = (char *)malloc(actual_length);
+            char *uncompressed_file_data = (char *)malloc(new_decompressed_size);
             if (uncompressed_file_data == NULL)
             {
                 perror("Failed to allocate memory");
@@ -843,12 +848,13 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                 free(files);
                 return EXIT_FAILURE;
             }
-            xread(input_file, uncompressed_file_data, actual_length, 0);
-            xwrite(dat_file, uncompressed_file_data, actual_length);
+            xread(input_file, uncompressed_file_data, new_decompressed_size, 0);
+            xwrite(dat_file, uncompressed_file_data, new_decompressed_size);
+            files[file_index].compressed_size = new_decompressed_size;
             free(uncompressed_file_data);
             fclose(input_file);
             char log_line[256];
-            sprintf(log_line, "File %d, TOC offset %08x, DAT offset %08x, not ucl compressed, reinserted.\n", file_index, files[file_index].start_offset, actual_offset);
+            sprintf(log_line, "Uncompressed File %d, TOC offset %08x, DAT offset %08x, new size %d\n", file_index, files[file_index].start_offset, actual_offset, files[file_index].compressed_size);
             fwrite(log_line, 1, strlen(log_line), log);
             continue;
         }
@@ -878,7 +884,12 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             return EXIT_FAILURE;
         }
 
-        char *compressed_file_data = (char *)malloc(actual_length);
+        new_len = ftell(temp_compressed_file);
+        files[file_index].compressed_size = new_len;
+        files[file_index].decompressed_size = new_decompressed_size;
+        printf("Compressed size: %d\n", new_len);
+
+        char *compressed_file_data = (char *)malloc(new_len);
         if (compressed_file_data == NULL)
         {
             perror("Failed to allocate memory");
@@ -890,17 +901,59 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         }
 
         fseek(temp_compressed_file, 0, SEEK_SET);
-        fseek(dat_file, actual_offset, SEEK_SET);
-        xread(temp_compressed_file, compressed_file_data, files[file_index].compressed_size, 0);
-        xwrite(dat_file, compressed_file_data, actual_length);
+
+#if REBUILDING_DEBUG == 1
+        FILE *debug_file = fopen("debug.bin", "wb");
+        if (debug_file == NULL)
+        {
+            perror("Failed to create debug file");
+            fclose(toc_file);
+            fclose(dat_file);
+            fclose(input_file);
+            free(files);
+            return EXIT_FAILURE;
+        }
+#endif
+
+
+        xread(temp_compressed_file, compressed_file_data, new_len, 0);
+        fseek(dat_file, 0, SEEK_SET);
+        fseek(dat_file, actual_offset, SEEK_CUR);
+        xwrite(dat_file, compressed_file_data, new_len);
+#if REBUILDING_DEBUG == 1
+        xwrite(debug_file, compressed_file_data, new_len);
+#endif
 
         free(compressed_file_data);
 
         fclose(input_file);
         fclose(temp_compressed_file);
+#if REBUILDING_DEBUG == 1
+        fclose(debug_file);
+#endif
 
+        /*write changes to .toc*/
+        fseek(toc_file, 0, SEEK_SET);
+        fseek(toc_file, 16, SEEK_SET);
+        switch(gameid){
+            case 0:
+                fseek(toc_file, file_index * 16, SEEK_CUR);
+                fseek(toc_file, 4, SEEK_CUR);
+                xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
+                xwrite32(toc_file, swap_uint32(files[file_index].decompressed_size));
+                fseek(toc_file, 4, SEEK_CUR);
+                break;
+            default:
+                fseek(toc_file, file_index * 20, SEEK_CUR);
+                fseek(toc_file, 4, SEEK_CUR);
+                xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
+                fseek(toc_file, 4, SEEK_CUR);
+                fseek(toc_file, 4, SEEK_CUR);
+                xwrite32(toc_file, swap_uint32(files[file_index].decompressed_size));
+                break;
+        }
         char log_line[256];
-        sprintf(log_line, "File %d, TOC offset %08x, DAT offset %08x, ucl compressed, reinserted.\n", file_index, files[file_index].start_offset, actual_offset); 
+        sprintf(log_line, "Compressed File %d, TOC offset %08x, DAT offset %08x, New compressed size: %d, New decompressed size: %d\n", file_index, files[file_index].start_offset, actual_offset, files[file_index].compressed_size, files[file_index].decompressed_size);
         fwrite(log_line, 1, strlen(log_line), log);
     }
 
@@ -916,7 +969,6 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 int __acc_cdecl_main main(int argc, char *argv[])
 {
     char toc_file[256], dat_file[256], output_dir[256], directory[256];
-    char mode;
     int result;
 
     if (argc < 2)
@@ -942,7 +994,6 @@ int __acc_cdecl_main main(int argc, char *argv[])
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
         strncpy(directory, argv[4], 255);
-        mode = 'r';
         if(REBUILDING_ALLOWED == 0){
             printf("Rebuilding is disabled in this release, still in development\n");
             return 1;
@@ -966,7 +1017,6 @@ int __acc_cdecl_main main(int argc, char *argv[])
             strncpy(game, argv[5], 2);
             gameid = atoi(game);
         }
-        mode = 'd';
         result = decompress_GUT_Archive(toc_file, dat_file, output_dir);
     }
     else
