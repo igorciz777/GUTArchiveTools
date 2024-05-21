@@ -35,6 +35,14 @@ Extracting a .dat container
 ```shell
 .\gut_archive.exe -cd .\00000010.DAT DAT_OUT
 ```
+Rebuilding a .dat container
+```shell
+.\gut_archive.exe -cr .\00000010.DAT DAT_IN
+```
+Extracting BUILD.DAT recursively
+```shell
+.\gut_archive.exe -dr .\BUILD.TOC .\BUILD.DAT BUILD_OUT
+```
 
 ## Compatible games
 - Kaido Racer (SLES-53191)
