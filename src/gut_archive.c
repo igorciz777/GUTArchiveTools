@@ -291,6 +291,7 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
     ucl_uint file_end_offset;
     ucl_uint dat_size;
     char *dat_data;
+    char log_line[256];
     int file_index = 0;
 
     dat_file = fopen(dat_filename, "rb");
@@ -300,7 +301,7 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         return EXIT_FAILURE;
     }
 
-    log = fopen("dat_extract.log", "w");
+    log = fopen("dat_extract.log", "a");
 
     char full_path[256];
     sprintf(full_path, "%s/%s", output_dir, dat_filename);
@@ -337,6 +338,8 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
 #if CONTAINER_DEBUG
     printf("Extracting DAT Container...\n");
 #endif
+    sprintf(log_line, "Extracting DAT file: %s\n", dat_filename);
+    fwrite(log_line, 1, strlen(log_line), log);
 
     xread(dat_file, &file_count, 4, 0);
 
@@ -356,10 +359,11 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
             file_end_offset = dat_size;
         }
 
-        char log_line[256];
+        
 #if CONTAINER_DEBUG
         printf("File %d: Start Offset: %08x, End Offset: %08x\n", file_index, file_start_offset, file_end_offset);
 #endif
+        log_line[0] = 0;
         sprintf(log_line, "File %d: Start Offset: %08x, End Offset: %08x\n", file_index, file_start_offset, file_end_offset);
         fwrite(log_line, 1, strlen(log_line), log);
 
@@ -417,13 +421,16 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
 #if CONTAINER_DEBUG
     printf("Files extracted successfully\n");
 #endif
+    log_line[0] = 0;
+    sprintf(log_line, "Files from: %s extracted successfully\n", dat_filename);
+    fwrite(log_line, 1, strlen(log_line), log);
     fclose(dat_file);
     fclose(log);
     return EXIT_SUCCESS;
 }
 
 /*TODO: taken straight from uclpack, needs a lighter alternative rewrite*/
-int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char *filename)
+int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char *filename , BOOL *dat_container)
 {
     int r;
     int method;
@@ -559,6 +566,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
                 if(strcmp(file_extension, "bin") == 0){
                     if(check_for_dat_container((char*)out)){
                         strncpy(file_extension, "dat", 5);
+                        *dat_container = TRUE;
                     }
                 }
                 sprintf(output_filename, "%s.%s", filename, file_extension);
@@ -916,7 +924,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             return EXIT_FAILURE;
         }
         sprintf(filename, "%s/%08d", output_dir, file_index);
-        r = do_decompress(temp_compressed_file, output_file, 0, filename);
+        r = do_decompress(temp_compressed_file, output_file, 0, filename, &dat_container);
         fclose(temp_compressed_file);
         if (r != 0)
         {
@@ -932,8 +940,11 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
         if(dat_container && recursive){
             char dat_output_dir[256];
+            /*stupid fix*/
+            char filename2[261];
+            sprintf(filename2, "%s.dat", filename);
             sprintf(dat_output_dir, "%s/%08d", output_dir, file_index);
-            extract_dat_container(filename, dat_output_dir, TRUE);
+            extract_dat_container(filename2, dat_output_dir, FALSE);
         }
 
         free(compressed_file_data);
