@@ -68,6 +68,10 @@ static BOOL check_for_dat_container(char* file_data){
         if(file_offset == 0x00){
             flag = FALSE;
         }
+        /*Kaido Racer edge case*/
+        if(file_offset == 0xFFFFFFFF){
+            flag = FALSE;
+        }
     }
     if(flag){
         memcpy(&file_offset, file_data + 4 + (file_count * 4), 4);
@@ -173,6 +177,102 @@ void xputc(FILE *f, int c)
 {
     unsigned char cc = (unsigned char)c;
     xwrite(f, (const ucl_voidp)&cc, 1);
+}
+
+int extract_legacy(const char* loc_file, const char* data_file, const char* output_dir){
+    FILE *loc, *dat;
+    FILE *log;
+    ucl_uint file_count;
+    ucl_uint file_start_offset;
+    ucl_uint file_size;
+    ucl_uint file_end_offset;
+    int file_index = 0;
+
+    loc = fopen(loc_file, "rb");
+    if (loc == NULL)
+    {
+        perror("Failed to open .loc file");
+        return EXIT_FAILURE;
+    }
+
+    dat = fopen(data_file, "rb");
+    if (dat == NULL)
+    {
+        perror("Failed to open .000 file");
+        fclose(loc);
+        return EXIT_FAILURE;
+    }
+
+    log = fopen("extract.log", "w");
+
+    xread(loc, &file_count, 4, 0);
+
+#ifdef _WIN32
+    _mkdir(output_dir);
+#else
+    mkdir(output_dir, 0700);
+#endif
+
+    printf("Extracting Legacy Archive...\n");
+
+    while(TRUE){
+        if(file_index >= file_count){
+            break;
+        }
+
+        xread(loc, &file_start_offset, 4, 0);
+        xread(loc, &file_size, 4, 0);
+        xread(loc, &file_end_offset, 4, 0);
+
+        char log_line[256];
+        sprintf(log_line, "File %d: Start Offset: %08x, End Offset: %08x, Size: %08x\n", file_index, file_start_offset, file_end_offset, file_size);
+        fwrite(log_line, 1, strlen(log_line), log);
+
+        char filename[256];
+        char file_extension[6];
+        char file_header[16];
+
+        file_header[0] = 0;
+        file_extension[0] = 0;
+
+        char *file_data = (char *)malloc(file_size);
+        if (file_data == NULL)
+        {
+            perror("Failed to allocate memory");
+            fclose(loc);
+            fclose(dat);
+            return EXIT_FAILURE;
+        }
+
+        fseek(dat, file_start_offset, SEEK_SET);
+        xread(dat, file_data, file_size, 0);
+
+        memcpy(file_header, file_data, 16);
+        strncpy(file_extension, find_file_extension(file_header), 5);
+
+        sprintf(filename, "%s/%08d.%s", output_dir, file_index, file_extension);
+
+        FILE *output_file = fopen(filename, "wb");
+        if (output_file == NULL)
+        {
+            perror("Failed to create output file");
+            fclose(loc);
+            fclose(dat);
+            free(file_data);
+            return EXIT_FAILURE;
+        }
+
+        xwrite(output_file, file_data, file_size);
+        fclose(output_file);
+
+        free(file_data);
+        file_index++;
+    }
+    printf("Files extracted successfully\n");
+    fclose(loc);
+    fclose(dat);
+    fclose(log);
+    return EXIT_SUCCESS;
 }
 
 int build_dat_container(const char *input_dir, const char *dat_filename)
@@ -1195,17 +1295,18 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
 void usage(const char *progname)
 {
-    printf("\nUsage: %s [-r tocFile datFile inDirectory] [-d tocFile datFile outputDirectory] -0\n\n", progname);
-    printf("  -r tocFile datFile inDirectory: \n\trebuild files in inDirectory into datFile\n\n");
-    printf("  -d tocFile datFile outputDirectory: \n\tdecompress and output the archive to outputDirectory\n\n");
-    printf("  -dr tocFile datFile outputDirectory: \n\tdecompress and output the archive recursively (any .dat files inside) to outputDirectory\n\n");
-    printf("  -rr tocFile datFile inDirectory: \n\trebuild files in inDirectory recursively (repacks .dat files inside) into datFile\n\n");
-    printf("  -cd datContainer outputDirectory: \n\textract files from a .dat container (different from BUILD.DAT!!!)\n\n");
-    printf("  -cr datContainer inDirectory: \n\trebuild files into a .dat container (different from BUILD.DAT!!!)\n\n");
+    printf("\nUsage: %s [-r <BUILD.TOC> <BUILD.DAT> <IN_DIR>] [-d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>] -0\n\n", progname);
+    printf("  -r <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
+    printf("  -d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
+    printf("  -dr <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive recursively (any .dat files inside) to <OUT_DIR>\n\n");
+    printf("  -rr <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> recursively (repacks .dat files inside) into <BUILD.DAT>\n\n");
+    printf("  -cd <FILE.DAT> <OUT_DIR>: \n\textract files from a .dat container (different from BUILD.DAT!!!)\n\n");
+    printf("  -cr <FILE.DAT> <IN_DIR>: \n\trebuild files into a .dat container (different from BUILD.DAT!!!)\n\n");
     printf("  -0,...: switch between compatible games (optional, use only if stated)\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
     printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
     printf("    -2: Import Tuner Challenge\n");
+    printf("  -l <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: \n\tlegacy mode for older games\n\n");
     printf("\n");
 }
 
@@ -1272,6 +1373,12 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
+        if(argc > 4)
+        {
+            char game[3];
+            strncpy(game, argv[4], 2);
+            gameid = atoi(game);
+        }
         strncpy(dat_file, argv[2], 255);
         strncpy(output_dir, argv[3], 255);
         result = extract_dat_container(dat_file, output_dir, TRUE);
@@ -1289,6 +1396,12 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
+        if(argc > 4)
+        {
+            char game[3];
+            strncpy(game, argv[4], 2);
+            gameid = atoi(game);
+        }
         strncpy(dat_file, argv[2], 255);
         strncpy(directory, argv[3], 255);
         result = build_dat_container(dat_file, directory);
@@ -1300,6 +1413,12 @@ int __acc_cdecl_main main(int argc, char *argv[])
             printf("Error: Insufficient arguments\n");
             usage(argv[0]);
             return 1;
+        }
+        if(argc > 5)
+        {
+            char game[3];
+            strncpy(game, argv[5], 2);
+            gameid = atoi(game);
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
@@ -1319,6 +1438,12 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
+        if(argc > 5)
+        {
+            char game[3];
+            strncpy(game, argv[5], 2);
+            gameid = atoi(game);
+        }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
         strncpy(directory, argv[4], 255);
@@ -1328,6 +1453,19 @@ int __acc_cdecl_main main(int argc, char *argv[])
             return 1;
         }
         result = rebuild_GUT_Archive(toc_file, dat_file, directory, TRUE);
+    }
+    else if(strcmp(argv[1], "-l") == 0)
+    {
+        if (argc < 5)
+        {
+            printf("Error: Insufficient arguments\n");
+            usage(argv[0]);
+            return 1;
+        }
+        strncpy(toc_file, argv[2], 255);
+        strncpy(dat_file, argv[3], 255);
+        strncpy(output_dir, argv[4], 255);
+        result = extract_legacy(toc_file, dat_file, output_dir);
     }
     else
     {
