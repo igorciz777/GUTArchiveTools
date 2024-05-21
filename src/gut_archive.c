@@ -12,7 +12,7 @@
 
 /*debug switches*/
 #define REBUILDING_ALLOWED 1
-#define REBUILDING_DAT 0
+#define REBUILDING_DAT 1
 #define REBUILDING_DEBUG 0
 #define CONTAINER_DEBUG 0
 #define RECURSIVE_ALLOWED 1
@@ -39,7 +39,7 @@ typedef struct
 typedef struct{
     ucl_uint start_offset;
     ucl_uint end_offset;
-} dat_file;
+} dat_file_in;
 
 static ucl_uint get_overhead(int method, ucl_uint size)
 {
@@ -275,9 +275,122 @@ int extract_legacy(const char* loc_file, const char* data_file, const char* outp
     return EXIT_SUCCESS;
 }
 
-int build_dat_container(const char *input_dir, const char *dat_filename)
+int build_dat_container(const char *dat_filename, const char *input_dir)
 {
-    return 0;
+    FILE *dat_file;
+    DIR *dir;
+    struct dirent *entry;
+    dat_file_in *files;
+    ucl_uint file_count = 0;
+    ucl_uint dat_size = 0;
+    ucl_uint file_start_offset = 0;
+    ucl_uint file_end_offset = 0;
+    ucl_uint file_length = 0;
+    int file_index = 0;
+
+    dat_file = fopen(dat_filename, "r+b");
+    if (dat_file == NULL)
+    {
+        perror("Failed to open .dat file");
+        return EXIT_FAILURE;
+    }
+
+    dir = opendir(input_dir);
+    if (dir == NULL)
+    {
+        perror("Failed to open input directory");
+        fclose(dat_file);
+        return EXIT_FAILURE;
+    }
+
+    xread(dat_file, &file_count, 4, 0);
+    files = (dat_file_in *)malloc(file_count * sizeof(dat_file_in));
+    if (files == NULL)
+    {
+        perror("Failed to allocate memory");
+        fclose(dat_file);
+        closedir(dir);
+        return EXIT_FAILURE;
+    }
+
+    printf("Rebuilding DAT Container...\n");
+
+    while(TRUE){
+        fseek(dat_file, 4, SEEK_SET);
+        fseek(dat_file, file_index * 4, SEEK_CUR);
+        if(file_index >= file_count){
+            break;
+        }
+        xread(dat_file, &file_start_offset, 4, 0);
+        if(file_start_offset == 0){
+            break;
+        }
+        xread(dat_file, &file_end_offset, 4, 0);
+        if(file_end_offset == 0){
+            file_end_offset = dat_size;
+        }
+
+        files[file_index].start_offset = file_start_offset;
+        files[file_index].end_offset = file_end_offset;
+        file_index++;
+    }
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (entry == NULL || entry->d_name[0] == '.')
+        {
+            continue;
+        }
+
+        char full_path[320];
+        sprintf(full_path, "%s/%s", input_dir, entry->d_name);
+
+        char no_ext[320];
+        strncpy(no_ext, entry->d_name, 320);
+        strtok(no_ext, ".");
+
+        file_index = atoi(no_ext);
+
+        FILE *input_file = fopen(full_path, "rb");
+        if (input_file == NULL)
+        {
+            perror("Failed to open input file");
+            fclose(dat_file);
+            closedir(dir);
+            free(files);
+            return EXIT_FAILURE;
+        }
+
+        fseek(input_file, 0, SEEK_END);
+        file_length = ftell(input_file);
+        fseek(input_file, 0, SEEK_SET);
+
+        char *file_data = (char *)malloc(file_length);
+        if (file_data == NULL)
+        {
+            perror("Failed to allocate memory");
+            fclose(input_file);
+            fclose(dat_file);
+            closedir(dir);
+            free(files);
+            return EXIT_FAILURE;
+        }
+        xread(input_file, file_data, file_length, 0);
+
+        fseek(dat_file, 0, SEEK_SET);
+        fseek(dat_file, files[file_index].start_offset, SEEK_CUR);
+
+        xwrite(dat_file, file_data, file_length);
+
+        free(file_data);
+        fclose(input_file);
+    }
+
+    free(files);
+    closedir(dir);
+    fclose(dat_file);
+    printf("DAT Container built successfully\n");
+    return EXIT_SUCCESS;
 }
 
 int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL check_correctness)
@@ -1093,9 +1206,29 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
     while ((entry = readdir(dir)) != NULL)
     {
+        if(strstr(entry->d_name, ".") == NULL){
+            continue;
+        }
         if (entry == NULL || entry->d_name[0] == '.')
         {
             continue;
+        }
+
+        /*check if dat*/
+        if (strstr(entry->d_name, ".dat") != NULL)
+        {
+            if(recursive == TRUE){
+                
+                char dat_name[320];
+                char dir_name[320];
+                sprintf(dat_name, "%s%s", input_dir, entry->d_name);
+                printf("Processing DAT file: %s\n", dat_name);
+                strcpy(dir_name, dat_name);
+                strtok(dir_name, ".");
+                if(build_dat_container(dat_name, dir_name) != EXIT_SUCCESS){
+                    printf("Skipping...\n");
+                }
+            }
         }
 
         char filename_index[300];
