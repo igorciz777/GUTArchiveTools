@@ -1,10 +1,6 @@
 #ifndef __UCL_ENDIAN_H_INCLUDED
 #define __UCL_ENDIAN_H_INCLUDED
 
-#ifndef __UCLCONF_H_INCLUDED
-#include <uclconf.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif
