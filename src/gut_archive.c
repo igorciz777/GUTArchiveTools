@@ -1439,13 +1439,14 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
 void usage(const char *progname)
 {
-    printf("\nUsage: %s [-r <BUILD.TOC> <BUILD.DAT> <IN_DIR>] [-d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>] -0\n\n", progname);
-    printf("  -r <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
-    printf("  -d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
-    printf("  -dr <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive recursively (any .dat files inside) to <OUT_DIR>\n\n");
-    printf("  -rr <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> recursively (repacks .dat files inside) into <BUILD.DAT>\n\n");
-    printf("  -cd <FILE.DAT> <OUT_DIR>: \n\textract files from a .dat container (different from BUILD.DAT!!!)\n\n");
-    printf("  -cr <FILE.DAT> <IN_DIR>: \n\trebuild files into a .dat container (different from BUILD.DAT!!!)\n\n");
+    printf("\nUsage: %s [mode] -0,...\n\n", progname);
+    printf("  Modes:\n");
+    printf("    -r <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
+    printf("    -d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
+    printf("    -dr <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive recursively (any .dat files inside) to <OUT_DIR>\n\n");
+    printf("    -rr <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> recursively (repacks .dat files inside) into <BUILD.DAT>\n\n");
+    printf("    -cd <FILE.DAT> <OUT_DIR>: \n\textract files from a .dat container\n\n");
+    printf("    -cr <FILE.DAT> <IN_DIR>: \n\trebuild files into a .dat container\n\n");
     printf("  -0,...: switch between compatible games (optional, use only if stated)\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
     printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
