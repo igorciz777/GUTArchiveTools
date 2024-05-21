@@ -14,8 +14,8 @@
 #define REBUILDING_ALLOWED 1
 #define REBUILDING_DAT 0
 #define REBUILDING_DEBUG 0
-#define CONTAINER_DEBUG 1
-#define RECURSIVE_ALLOWED 0
+#define CONTAINER_DEBUG 0
+#define RECURSIVE_ALLOWED 1
 
 static unsigned long total_in = 0;
 static unsigned long total_out = 0;
@@ -182,6 +182,7 @@ int build_dat_container(const char *input_dir, const char *dat_filename)
 
 int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL check_correctness)
 {
+    BOOL recursive_dat = FALSE;
     FILE *dat_file;
     FILE *log;
     ucl_uint file_count;
@@ -233,11 +234,14 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
             return EXIT_FAILURE;
         }
     }
+#if CONTAINER_DEBUG
     printf("Extracting DAT Container...\n");
+#endif
 
     xread(dat_file, &file_count, 4, 0);
 
     while(TRUE){
+        recursive_dat = FALSE;
         fseek(dat_file, 4, SEEK_SET);
         fseek(dat_file, file_index * 4, SEEK_CUR);
         if(file_index >= file_count){
@@ -253,7 +257,9 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         }
 
         char log_line[256];
+#if CONTAINER_DEBUG
         printf("File %d: Start Offset: %08x, End Offset: %08x\n", file_index, file_start_offset, file_end_offset);
+#endif
         sprintf(log_line, "File %d: Start Offset: %08x, End Offset: %08x\n", file_index, file_start_offset, file_end_offset);
         fwrite(log_line, 1, strlen(log_line), log);
 
@@ -278,6 +284,12 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         file_extension[0] = 0;
         memcpy(file_header, file_data, 16);
         strncpy(file_extension, find_file_extension(file_header), 5);
+        if(strcmp(file_extension, "bin") == 0){
+            if(check_for_dat_container(file_data)){
+                strncpy(file_extension, "dat", 5);
+                recursive_dat = TRUE;
+            }
+        }
 
         sprintf(filename, "%s/%08d.%s", output_dir, file_index, file_extension);
 
@@ -292,10 +304,19 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
 
         xwrite(output_file, file_data, file_length);
         fclose(output_file);
+        /*recursive dat unpacking for dats inside dats (thanks genki)*/
+        if(recursive_dat){
+            char dat_output_dir[256];
+            sprintf(dat_output_dir, "%s/%08d", output_dir, file_index);
+            extract_dat_container(filename, dat_output_dir, FALSE);
+        }
+
         free(file_data);
         file_index++;
     }
+#if CONTAINER_DEBUG
     printf("Files extracted successfully\n");
+#endif
     fclose(dat_file);
     fclose(log);
     return EXIT_SUCCESS;
@@ -638,6 +659,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     printf("Extracting GUT Archive...\n");
     while (TRUE)
     {
+        dat_container = FALSE;
         if (file_index >= file_count)
         {
             break;
@@ -756,6 +778,14 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             }
             xwrite(output_file, compressed_file_data, actual_length);
             fclose(output_file);
+
+            /*recursive dat unpacking*/
+            if(dat_container && recursive){
+                char dat_output_dir[256];
+                sprintf(dat_output_dir, "%s/%08d", output_dir, file_index);
+                extract_dat_container(filename, dat_output_dir, FALSE);
+            }
+
             free(compressed_file_data);
             file_index++;
             continue;
@@ -798,6 +828,14 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         }
 
         fclose(output_file);
+        /*recursive dat unpacking*/
+
+        if(dat_container && recursive){
+            char dat_output_dir[256];
+            sprintf(dat_output_dir, "%s/%08d", output_dir, file_index);
+            extract_dat_container(filename, dat_output_dir, TRUE);
+        }
+
         free(compressed_file_data);
         file_index++;
     }
@@ -1284,7 +1322,7 @@ int __acc_cdecl_main main(int argc, char *argv[])
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
         strncpy(directory, argv[4], 255);
-        if(RECURSIVE_ALLOWED == 0)
+        if(RECURSIVE_ALLOWED == 0 || REBUILDING_DAT == 0)
         {
             printf("Recursive rebuilding is disabled in this release, still in development\n");
             return 1;
