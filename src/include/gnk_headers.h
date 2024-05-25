@@ -10,54 +10,66 @@ static const unsigned char BD[16] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0
 static const unsigned char BD_2[16] = {0x00, 0x07, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77, 0x77};
 static const unsigned char XDR2[4] = {0x58, 0x50, 0x52, 0x32};
 static const unsigned char TX2D[4] = {0x54, 0x58, 0x32, 0x44};
+
 static const unsigned char GIM[4] = {0x4D, 0x49, 0x47, 0x2E};
 static const unsigned char GMO[4] = {0x4F, 0x4D, 0x47, 0x2E};
-static const unsigned char HIDE[4] = {0x45, 0x44, 0x49, 0x48};
+static const unsigned char GXT[4] = {0x47, 0x58, 0x54, 0x00};
+static const unsigned char GIM_BIG[4] = {0x2E, 0x47, 0x49, 0x4D};
+static const unsigned char GMO_BIG[4] = {0x2E, 0x47, 0x4D, 0x4F};
+static const unsigned char GXT_BIG[4] = {0x00, 0x54, 0x58, 0x47};
 
-static char *find_file_extension(const char *file_header)
+static const unsigned char DDS[4] = {0x44, 0x44, 0x53, 0x20};
+static const unsigned char VAG[4] = {0x56, 0x41, 0x47, 0x70};
+static const unsigned char HIDE[4] = {0x45, 0x44, 0x49, 0x48};
+static const unsigned char GINF[4] = {0x46, 0x4E, 0x49, 0x47};
+
+static const unsigned char PNG[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+static const unsigned char JPG[3] = {0xFF, 0xD8, 0xFF};
+static const unsigned char BMP[2] = {0x42, 0x4D};
+static const unsigned char GIF[3] = {0x47, 0x49, 0x46};
+static const unsigned char TGA[18] = {0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 0x20, 0x00, 0x00, 0x00};
+
+typedef struct
 {
-    if (memcmp(file_header, XVI, 8) == 0)
+    const char extension[8];
+    const unsigned char *magic;
+    int magic_size;
+} file_extension;
+
+static const file_extension file_extensions[] = {
+    {"ucl", UCL_MAGIC, 8},
+    {"xvi", XVI, 8},
+    {"tm2", TIM2, 4},
+    {"hd", HD, 8},
+    {"bd", BD, 16},
+    {"bd", BD_2, 16},
+    {"xdr", XDR2, 4},
+    {"txd", TX2D, 4},
+    {"gim", GIM, 4},
+    {"gmo", GMO, 4},
+    {"gxt", GXT, 4},
+    {"gim", GIM_BIG, 4},
+    {"gmo", GMO_BIG, 4},
+    {"gxt", GXT_BIG, 4},
+    {"hide", HIDE, 4},
+    {"dds", DDS, 4},
+    {"vag", VAG, 4},
+    {"ginf", GINF, 4},
+    {"png", PNG, 8},
+    {"jpg", JPG, 3},
+    {"bmp", BMP, 2},
+    {"gif", GIF, 3},
+    {"tga", TGA, 18},
+};
+
+static const char *find_file_extension(const char *file_header)
+{
+    for (int i = 0; i < sizeof(file_extensions) / sizeof(file_extension); i++)
     {
-        return "xvi";
+        if (memcmp(file_header, file_extensions[i].magic, file_extensions[i].magic_size) == 0)
+        {
+            return file_extensions[i].extension;
+        }
     }
-    else if (memcmp(file_header, TIM2, 4) == 0)
-    {
-        return "tm2";
-    }
-    else if (memcmp(file_header, HD, 8) == 0)
-    {
-        return "hd";
-    }
-    else if (memcmp(file_header, BD, 16) == 0)
-    {
-        return "bd";
-    }
-    else if (memcmp(file_header, BD_2, 16) == 0)
-    {
-        return "bd";
-    }
-    else if (memcmp(file_header, XDR2, 4) == 0)
-    {
-        return "xdr";
-    }
-    else if (memcmp(file_header, TX2D, 4) == 0)
-    {
-        return "txd";
-    }
-    else if (memcmp(file_header, GIM, 4) == 0)
-    {
-        return "gim";
-    }
-    else if (memcmp(file_header, GMO, 4) == 0)
-    {
-        return "gmo";
-    }
-    else if (memcmp(file_header, HIDE, 4) == 0)
-    {
-        return "hide";
-    }
-    else
-    {
-        return "bin";
-    }
+    return "bin";
 }
