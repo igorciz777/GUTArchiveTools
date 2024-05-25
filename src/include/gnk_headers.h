@@ -29,16 +29,19 @@ static const unsigned char BMP[2] = {0x42, 0x4D};
 static const unsigned char GIF[3] = {0x47, 0x49, 0x46};
 static const unsigned char TGA[18] = {0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x0A, 0x00, 0x00, 0x00, 0x01, 0x00, 0x18, 0x00, 0x20, 0x00, 0x00, 0x00};
 
+/*not sure about endian of this one, found in c1gp demo*/
+static const unsigned char BSPR[4] = {0x52, 0x50, 0x53, 0x42};
+
+
 typedef struct
 {
-    const char extension[8];
+    const char extension[16];
     const unsigned char *magic;
     int magic_size;
 } file_extension;
 
 static const file_extension file_extensions[] = {
     {"ucl", UCL_MAGIC, 8},
-    {"xvi", XVI, 8},
     {"tm2", TIM2, 4},
     {"hd", HD, 8},
     {"bd", BD, 16},
@@ -60,6 +63,8 @@ static const file_extension file_extensions[] = {
     {"bmp", BMP, 2},
     {"gif", GIF, 3},
     {"tga", TGA, 18},
+    {"bspr", BSPR, 4},
+    {"xvi", XVI, 8}
 };
 
 static const char *find_file_extension(const char *file_header)

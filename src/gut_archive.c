@@ -53,6 +53,7 @@ static BOOL check_for_dat_container(char* file_data){
     ucl_uint file_count;
     ucl_uint file_offset;
 
+
     memcpy(&file_count, file_data, 4);
 #if CONTAINER_DEBUG
     printf("File count: %d\n", file_count);
@@ -70,6 +71,10 @@ static BOOL check_for_dat_container(char* file_data){
         }
         /*Kaido Racer edge case*/
         if(file_offset == 0xFFFFFFFF){
+            flag = FALSE;
+        }
+        /*Bakumatsuden edge case*/
+        if(file_count == 0x0F && file_offset == 0x29 && i < 1){
             flag = FALSE;
         }
     }
