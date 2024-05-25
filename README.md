@@ -18,7 +18,7 @@ gut_archive [mode] -0,...
 - **-l** <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: Legacy mode for older games
 
 ### Game switches
-- **-0**: Tokyo Xtreme Racer DRIFT 2
+- **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu
 - **-1**: Tokyo Xtreme Racer 3, Shutokou Battle 01
 - **-2**: Import Tuner Challenge
 
@@ -46,6 +46,8 @@ Extracting BUILD.DAT recursively
 
 ## Compatible games
 - Kaido Racer (SLES-53191)
+- Kaido Racer 2 (SLES-53900) - same as txrd2 but different file count, use -0
+- Kaidou Battle - Touge no Densetsu (SLPM-61121) - same as txrd2 but different file count, use -0
 - Kaidou Battle - Nikko, Haruna, Rokko, Hakone (SLPM-65246) (SLKA-25063)
 - Fu-un Bakumatsu-den (SLPM-61096)
 - RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) (SLPM-61115)
@@ -53,11 +55,9 @@ Extracting BUILD.DAT recursively
 - Shutokou Battle 01 (SLPM-65308) (SLPM-60206), use -1 to skip a duped block of data in file id 1 (only in release version, demo works with default)
 - Tokyo Xtreme Racer 3 (SLUS-20831), use -1 to skip a duped block of data in file id 1
 - Tokyo Xtreme Racer Drift (SLUS-21236)
+- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - extracts all files but there is still some unknown fields in .toc, use -0
 
 ## Semi-compatible games
-- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - toc offsets get weirdly mixed up towards the end, use -0 to extract some available files
-- Kaido Racer 2 (SLES-53900) - same as txrd2 but different file count
-- Kaidou Battle - Touge no Densetsu (SLPM-61121) - same as txrd2 but different file count
 - Ninkyouden: Toseinin Ichidaiki (SLPM-61144) - similar to txrd2, -0 to extract some files
 - Wangan Midnight Portable (ULJM-05264) - similar to txrd2, -0 to extract some files
 - Import Tuner Challenge - experimental support with -2, no file types defined yet
