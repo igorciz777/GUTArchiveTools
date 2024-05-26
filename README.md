@@ -69,7 +69,7 @@ Extracting BUILD.DAT recursively
 
 
 ## Current issues
-- Very few file types are defined, none for xbox and psp
+- Very few file types are defined, none for xbox 
 - Problems with many games
 - Lacks proper error handling in many places
 - Lacks options regarding creating a .log
