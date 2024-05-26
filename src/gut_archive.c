@@ -69,7 +69,7 @@ static BOOL check_for_dat_container(char* file_data, ucl_uint file_size){
         if(file_offset == 0x00){
             flag = FALSE;
         }
-        if(file_offset > file_size){
+        if(file_offset >= file_size){
             flag = FALSE;
         }
         /*Kaido Racer edge case*/
@@ -694,7 +694,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
                 memcpy(header, out, 32);
                 strncpy(file_extension, find_file_extension(header), 5);
                 if(strcmp(file_extension, "bin") == 0){
-                    if(check_for_dat_container((char*)out, out_len)){
+                    if(check_for_dat_container((char*)out, swap_uint16(out_len))){
                         strncpy(file_extension, "dat", 5);
                         *dat_container = TRUE;
                     }
