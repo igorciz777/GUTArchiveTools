@@ -49,11 +49,10 @@ static ucl_uint get_overhead(int method, ucl_uint size)
     return 0;
 }
 
-static BOOL check_for_dat_container(char* file_data){
+static BOOL check_for_dat_container(char* file_data, ucl_uint file_size){
     BOOL flag = TRUE;
     ucl_uint file_count;
     ucl_uint file_offset;
-
 
     memcpy(&file_count, file_data, 4);
 #if CONTAINER_DEBUG
@@ -68,6 +67,9 @@ static BOOL check_for_dat_container(char* file_data){
         printf("File %d offset: %08x\n", i, file_offset);
 #endif
         if(file_offset == 0x00){
+            flag = FALSE;
+        }
+        if(file_offset > file_size){
             flag = FALSE;
         }
         /*Kaido Racer edge case*/
@@ -141,7 +143,7 @@ ucl_uint xread(FILE *f, ucl_voidp buf, ucl_uint len, ucl_bool allow_eof)
     }
     if (l != len && !allow_eof)
     {
-        fprintf(stderr, "\nread error - premature end of file\n");
+        fprintf(stderr, "\nread error - premature end of file, check compatibility mode\n");
         exit(1);
     }
     total_in += l;
@@ -447,7 +449,7 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         xread(dat_file, dat_data, dat_size, 0);
         fseek(dat_file, 0, SEEK_SET);
 
-        if(!check_for_dat_container(dat_data)){
+        if(!check_for_dat_container(dat_data, dat_size)){
             printf("Invalid DAT Container\n");
             fclose(dat_file);
             free(dat_data);
@@ -517,7 +519,7 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         memcpy(file_header, file_data, 32);
         strncpy(file_extension, find_file_extension(file_header), 5);
         if(strcmp(file_extension, "bin") == 0){
-            if(check_for_dat_container(file_data)){
+            if(check_for_dat_container(file_data, file_length)){
                 strncpy(file_extension, "dat", 5);
                 recursive_dat = TRUE;
             }
@@ -692,7 +694,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
                 memcpy(header, out, 32);
                 strncpy(file_extension, find_file_extension(header), 5);
                 if(strcmp(file_extension, "bin") == 0){
-                    if(check_for_dat_container((char*)out)){
+                    if(check_for_dat_container((char*)out, out_len)){
                         strncpy(file_extension, "dat", 5);
                         *dat_container = TRUE;
                     }
@@ -1006,7 +1008,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             memcpy(file_header, compressed_file_data, 32);
             strncpy(file_extension, find_file_extension(file_header), 5);
             if(strcmp(file_extension, "bin") == 0){
-                if(check_for_dat_container(compressed_file_data)){
+                if(check_for_dat_container(compressed_file_data, actual_length)){
                     strncpy(file_extension, "dat", 5);
                     dat_container = TRUE;
                 }
