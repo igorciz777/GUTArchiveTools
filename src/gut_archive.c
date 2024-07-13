@@ -575,6 +575,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
     char file_extension[6];
     char output_filename[256];
     unsigned char m[sizeof(UCL_MAGIC)];
+    BOOL dat_check = 1;
 
     r = 0;
     header[0] = 0;
@@ -688,8 +689,9 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
                 r = 6;
                 goto err;
             }
-            if (header[0] == 0)
+            if (header[0] == 0 && dat_check == 1)
             {
+                dat_check = 0;
                 fclose(fo);
                 memcpy(header, out, 32);
                 strncpy(file_extension, find_file_extension(header), 5);
