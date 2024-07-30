@@ -14,7 +14,7 @@
 /*debug switches*/
 #define REBUILDING_ALLOWED 1
 #define REBUILDING_DAT 1
-#define REBUILDING_DEBUG 1
+#define REBUILDING_DEBUG 0
 #define CONTAINER_DEBUG 0
 #define RECURSIVE_ALLOWED 1
 
