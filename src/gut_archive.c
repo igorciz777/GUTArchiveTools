@@ -1415,6 +1415,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     ucl_uint file_count;
     ucl_uint start_offset, compressed_size, end_offset, zero_field, decompressed_size;
     ucl_uint actual_offset;
+    ucl_uint new_toc_offset;
     ucl_uint additional_offset = 0, new_additional_offset;
     ucl_uint32 new_len, old_len, new_decompressed_size;
     ucl_uint dat_file_end_offset;
@@ -1614,22 +1615,30 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
         if (files[file_index].importing == FALSE)
         {
-            //move other files from old dat to new dat with added offset
-            fseek(dat_file, files[file_index].start_offset * 0x800, SEEK_SET);
-            fseek(new_dat_file, (files[file_index].start_offset + additional_offset) * 0x800, SEEK_SET);
-            char *file_data = (char *)malloc(files[file_index].compressed_size);
-            if (file_data == NULL)
+            if(files[file_index].zero_field == 0 || gameid != 1)
             {
-                perror("Failed to allocate memory");
-                fclose(toc_file);
-                fclose(dat_file);
-                fclose(new_dat_file);
-                free(files);
-                return EXIT_FAILURE;
+                //move other files from old dat to new dat with added offset
+                fseek(dat_file, files[file_index].start_offset * 0x800, SEEK_SET);
+                fseek(new_dat_file, (files[file_index].start_offset + additional_offset) * 0x800, SEEK_SET);
+                char *file_data = (char *)malloc(files[file_index].compressed_size);
+                if (file_data == NULL)
+                {
+                    perror("Failed to allocate memory");
+                    fclose(toc_file);
+                    fclose(dat_file);
+                    fclose(new_dat_file);
+                    free(files);
+                    return EXIT_FAILURE;
+                }
+                xread(dat_file, file_data, files[file_index].compressed_size, 0);
+                xwrite(new_dat_file, file_data, files[file_index].compressed_size);
+                free(file_data);
+
             }
-            xread(dat_file, file_data, files[file_index].compressed_size, 0);
-            xwrite(new_dat_file, file_data, files[file_index].compressed_size);
-            free(file_data);
+
+            char log_line[256];
+            sprintf(log_line, "Unchanged File %d: Old TOC: %08x, New TOC: %08x, Old DAT: %08x, New DAT: %08x\n", file_index, files[file_index].start_offset, files[file_index].start_offset + additional_offset, files[file_index].start_offset * 0x800, (files[file_index].start_offset + additional_offset) * 0x800);
+            fwrite(log_line, 1, strlen(log_line), log);
 
             if(additional_offset > 0){
                 /*write changes to .toc*/
@@ -1651,7 +1660,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                     fseek(toc_file, file_index * 20, SEEK_CUR);
                     xwrite32(toc_file, swap_uint32(files[file_index].start_offset + additional_offset));
                     fseek(toc_file, 4, SEEK_CUR);
-                    xwrite32(toc_file, swap_uint32(files[file_index].end_offset + additional_offset));
+                    xwrite32(toc_file, swap_uint32(files[file_index].end_offset));
                     fseek(toc_file, 8, SEEK_CUR);
                     break;
                 }
@@ -1661,6 +1670,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         //for imported files check if they are longer than the original, if so, add the difference to the additional offset
 
         actual_offset = (files[file_index].start_offset + additional_offset) * 0x800;
+        new_toc_offset = files[file_index].start_offset + additional_offset;
 
         if (files[file_index].zero_field == 1)
         {
@@ -1705,9 +1715,9 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
             new_additional_offset = additional_offset;
 
-            while(files[file_index].start_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
+            while(new_toc_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
                 new_additional_offset += 1;
-                files[file_index].end_offset += 2;
+                files[file_index].end_offset += 1;
             }
 
             xread(input_file, uncompressed_file_data, new_decompressed_size, 0);
@@ -1737,7 +1747,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                 fseek(toc_file, file_index * 20, SEEK_CUR);
                 xwrite32(toc_file, swap_uint32(files[file_index].start_offset + additional_offset));
                 xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
-                xwrite32(toc_file, swap_uint32(files[file_index].end_offset + additional_offset));
+                xwrite32(toc_file, swap_uint32(files[file_index].end_offset));
                 fseek(toc_file, 8, SEEK_CUR);
                 break;
             }
@@ -1788,9 +1798,9 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
         new_additional_offset = additional_offset;
 
-        while(files[file_index].start_offset * 0x800 + new_len > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
+        while(new_toc_offset * 0x800 + new_len > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
             new_additional_offset += 1;
-            files[file_index].end_offset += 2;
+            files[file_index].end_offset += 1;
         }
         old_len = files[file_index].compressed_size;
         files[file_index].compressed_size = new_len;
@@ -1845,7 +1855,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             fseek(toc_file, file_index * 20, SEEK_CUR);
             xwrite32(toc_file, swap_uint32(files[file_index].start_offset + additional_offset));
             xwrite32(toc_file, swap_uint32(files[file_index].compressed_size));
-            xwrite32(toc_file, swap_uint32(files[file_index].end_offset + additional_offset));
+            xwrite32(toc_file, swap_uint32(files[file_index].end_offset));
             fseek(toc_file, 4, SEEK_CUR);
             xwrite32(toc_file, swap_uint32(files[file_index].decompressed_size));
             break;
