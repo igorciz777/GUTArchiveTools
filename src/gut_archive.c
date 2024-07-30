@@ -14,7 +14,7 @@
 /*debug switches*/
 #define REBUILDING_ALLOWED 1
 #define REBUILDING_DAT 1
-#define REBUILDING_DEBUG 0
+#define REBUILDING_DEBUG 1
 #define CONTAINER_DEBUG 0
 #define RECURSIVE_ALLOWED 1
 
@@ -1312,8 +1312,9 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
             new_additional_offset = additional_offset;
 
-            while(files[file_index].start_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + new_additional_offset) * 0x800){
+            while(files[file_index].start_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
                 new_additional_offset += 1;
+                files[file_index].end_offset += 2;
             }
 
             xread(input_file, uncompressed_file_data, new_decompressed_size, 0);
@@ -1388,12 +1389,15 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 #if REBUILDING_DEBUG == 1
         printf("[UCL]New size: %d\n", new_len);
         printf("[UCL]Old size: %d\n", files[file_index].compressed_size);
+        printf("[UCL]start_offset + new_len: %d\n", files[file_index].start_offset * 0x800 + new_len);
+        printf("[UCL]start_offset + additional_offset: %d\n", (files[file_index].start_offset + additional_offset + files[file_index].end_offset) * 0x800);
 #endif
 
         new_additional_offset = additional_offset;
 
-        while(files[file_index].start_offset * 0x800 + new_len > (files[file_index].start_offset + new_additional_offset) * 0x800){
+        while(files[file_index].start_offset * 0x800 + new_len > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
             new_additional_offset += 1;
+            files[file_index].end_offset += 2;
         }
         old_len = files[file_index].compressed_size;
         files[file_index].compressed_size = new_len;
