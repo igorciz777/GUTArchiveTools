@@ -6,7 +6,7 @@ This program is an attempt to reverse engineer the archive to allow file modding
 
 ## Usage
 ```shell
-gut_archive [mode] -0,...
+gut_archive [mode] -0,... [log]
 ```
 ### Modes
 - **-r** <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> into <BUILD.DAT>
@@ -22,10 +22,17 @@ gut_archive [mode] -0,...
 - **-1**: Tokyo Xtreme Racer 3, Shutokou Battle 01
 - **-2**: Import Tuner Challenge
 
+### Logs
+- **-log**: Save a log file after decompression/rebuilding
+
 ### Examples
 Regular decompression and extraction
 ```shell
 .\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT
+```
+Decompression with logging
+```shell
+.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -log
 ```
 For TXR:D2 and alike
 ```shell
@@ -72,7 +79,6 @@ Extracting BUILD.DAT recursively
 - Very few file types are defined, none for xbox 
 - Problems with many games
 - Lacks proper error handling in many places
-- Lacks options regarding creating a .log
 - Possible issues with building on both platforms
 - Code is a spaghetti mess
 
