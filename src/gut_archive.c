@@ -21,6 +21,7 @@
 static char progname[] = "gut_archive";
 
 static int gameid = 1;
+static BOOL logs = FALSE;
 static ucl_uint opt_fast = 1;
 
 typedef struct
@@ -183,6 +184,7 @@ int extract_legacy(const char* loc_file, const char* data_file, const char* outp
     fclose(loc);
     fclose(dat);
     fclose(log);
+    if (!logs) remove("extract.log");
     return EXIT_SUCCESS;
 }
 
@@ -459,6 +461,7 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
     fwrite(log_line, 1, strlen(log_line), log);
     fclose(dat_file);
     fclose(log);
+    if (!logs) remove("dat_extract.log");
     return EXIT_SUCCESS;
 }
 
@@ -996,6 +999,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     fclose(toc_file);
     fclose(dat_file);
     fclose(log);
+    if (!logs) remove("decomp.log");
     return EXIT_SUCCESS;
 }
 
@@ -1467,6 +1471,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     fclose(new_dat_file);
     rename("new.dat", dat_filename);
     fclose(log);
+    if (!logs) remove("rebuild.log");
     free(files);
     closedir(dir);
     return EXIT_SUCCESS;
@@ -1475,7 +1480,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
 void usage(const char *progname)
 {
-    printf("\nUsage: %s [mode] -0,...\n\n", progname);
+    printf("\nUsage: %s [mode] [comp] [log]\n\n", progname);
     printf("  Modes:\n");
     printf("    -r <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
     printf("    -d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
@@ -1483,11 +1488,13 @@ void usage(const char *progname)
     printf("    -rr <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> recursively (repacks .dat files inside) into <BUILD.DAT>\n\n");
     printf("    -cd <FILE.DAT> <OUT_DIR>: \n\textract files from a .dat container\n\n");
     printf("    -cr <FILE.DAT> <IN_DIR>: \n\trebuild files into a .dat container\n\n");
-    printf("  -0,...: switch between compatible games (optional, use only if stated)\n");
+    printf("    -l <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: \n\tlegacy mode for older games\n\n");
+    printf("  Compatibility switches (only use if stated):\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
     printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
-    printf("    -2: Import Tuner Challenge\n");
-    printf("  -l <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: \n\tlegacy mode for older games\n\n");
+    printf("    -2: Import Tuner Challenge\n\n");
+    printf("  Logs:\n");
+    printf("    -log: Creates a log file for the operation\n\n");
     printf("\n");
 }
 
@@ -1522,9 +1529,13 @@ int __acc_cdecl_main main(int argc, char *argv[])
         strncpy(directory, argv[4], 255);
         if (argc > 5)
         {
-            char game[3];
-            strncpy(game, argv[5], 2);
-            gameid = atoi(game);
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 6){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         if (REBUILDING_ALLOWED == 0)
         {
@@ -1546,9 +1557,13 @@ int __acc_cdecl_main main(int argc, char *argv[])
         strncpy(output_dir, argv[4], 255);
         if (argc > 5)
         {
-            char game[3];
-            strncpy(game, argv[5], 2);
-            gameid = atoi(game);
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 6){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         result = decompress_GUT_Archive(toc_file, dat_file, output_dir, FALSE);
     }
@@ -1560,11 +1575,15 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
-        if(argc > 4)
+        if (argc > 4)
         {
-            char game[3];
-            strncpy(game, argv[4], 2);
-            gameid = atoi(game);
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 5){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         strncpy(dat_file, argv[2], 255);
         strncpy(output_dir, argv[3], 255);
@@ -1583,11 +1602,15 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
-        if(argc > 4)
+        if (argc > 4)
         {
-            char game[3];
-            strncpy(game, argv[4], 2);
-            gameid = atoi(game);
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 5){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         strncpy(dat_file, argv[2], 255);
         strncpy(directory, argv[3], 255);
@@ -1601,11 +1624,15 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
-        if(argc > 5)
+        if (argc > 5)
         {
-            char game[3];
-            strncpy(game, argv[5], 2);
-            gameid = atoi(game);
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 6){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
@@ -1625,11 +1652,15 @@ int __acc_cdecl_main main(int argc, char *argv[])
             usage(argv[0]);
             return 1;
         }
-        if(argc > 5)
+        if (argc > 5)
         {
-            char game[3];
-            strncpy(game, argv[5], 2);
-            gameid = atoi(game);
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 6){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
@@ -1648,6 +1679,16 @@ int __acc_cdecl_main main(int argc, char *argv[])
             printf("Error: Insufficient arguments\n");
             usage(argv[0]);
             return 1;
+        }
+        if (argc > 5)
+        {
+            char arg[5];
+            strncpy(arg, argv[5], 4);
+            if(arg[1] != 'l') gameid = atoi(arg);
+            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+        }
+        if(argc > 6){
+            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
