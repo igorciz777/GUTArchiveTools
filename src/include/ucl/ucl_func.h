@@ -50,7 +50,6 @@ ucl_uint xwrite(FILE *f, const ucl_voidp buf, ucl_uint len)
 ucl_uint xread(FILE *f, ucl_voidp buf, ucl_uint len, ucl_bool allow_eof)
 {
     ucl_uint l;
-
     l = (ucl_uint)ucl_fread(f, buf, len);
     if (l > len)
     {

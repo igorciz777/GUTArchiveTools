@@ -42,6 +42,23 @@ typedef struct{
     ucl_uint end_offset;
 } dat_file_in;
 
+void progress_bar(int percentage) {
+    int bar_width = 50;
+    int pos = (percentage * bar_width) / 100;
+    
+    printf("[");  // Start of the bar
+    
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < pos) {
+            printf("=");
+        } else {
+            printf(" ");
+        }
+    }
+    
+    printf("] %d%%\r", percentage);
+    fflush(stdout);
+}
 
 static BOOL check_for_dat_container(char* file_data, ucl_uint file_size){
     BOOL flag = TRUE;
@@ -797,6 +814,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     log = fopen("decomp.log", "w");
 
     xread(toc_file, &file_count, 4, 0);
+    if(gameid == -2) file_count = swap_uint32(file_count);
     fseek(toc_file, 16, SEEK_SET);
 
 #ifdef _WIN32
@@ -805,13 +823,17 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     mkdir(output_dir, 0700);
 #endif
     printf("Extracting GUT Archive...\n");
+    printf("File count: %d\n", file_count);
     while (TRUE)
     {
         dat_container = FALSE;
         if (file_index >= file_count)
         {
+            progress_bar(100);
+            printf("\n");
             break;
         }
+        progress_bar((file_index * 100) / file_count);
         /*experimental switch for different games*/
         switch (gameid)
         {
@@ -842,6 +864,11 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             xread(toc_file, &decompressed_size, 4, 0);
             decompressed_size = swap_uint32(decompressed_size);
             xread(toc_file, &zero_field, 4, 0);
+            if(file_index == file_count - 1){
+                end_offset = dat_file_end_offset;
+                end_offset = swap_uint32(end_offset - swap_uint32(start_offset));
+                break;
+            }
             xread(toc_file, &end_offset, 4, 0);
             if (end_offset == 0)
             {
@@ -849,7 +876,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
                 zero_field = 1;
                 break;
             }
-            end_offset = end_offset - start_offset;
+            end_offset = swap_uint32(swap_uint32(end_offset) - swap_uint32(start_offset));
             fseek(toc_file, -4, SEEK_CUR);
             break;
         default:
@@ -869,7 +896,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             actual_length = swap_uint32(end_offset) * 0x800;
         }
 
-        if (actual_offset == 0 && file_index > 1 && gameid == 0)
+        if (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2))
         {
             zero_field = 1;
         }
@@ -903,7 +930,6 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             fclose(dat_file);
             return EXIT_FAILURE;
         }
-
         xread(dat_file, compressed_file_data, actual_length, 0);
 
         if (!compressed)
