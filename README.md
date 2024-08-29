@@ -63,11 +63,11 @@ Extracting BUILD.DAT recursively
 - Tokyo Xtreme Racer 3 (SLUS-20831), use -1 to skip a duped block of data in file id 1
 - Tokyo Xtreme Racer Drift (SLUS-21236)
 - Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - extracts all files but there is still some unknown fields in .toc, use -0
+- Import Tuner Challenge, use -2
 
 ## Semi-compatible games
 - Ninkyouden: Toseinin Ichidaiki (SLPM-61144) - similar to txrd2, -0 to extract some files
 - Wangan Midnight Portable (ULJM-05264) - similar to txrd2, -0 to extract some files
-- Import Tuner Challenge - experimental support with -2, no file types defined yet
 - Fu-un Shinsengumi (SLKA-25139) - extracting .dat containers does not work
 
 ## Incompatible games
