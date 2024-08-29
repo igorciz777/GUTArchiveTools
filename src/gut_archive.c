@@ -14,7 +14,7 @@
 /*debug switches*/
 #define REBUILDING_ALLOWED 1
 #define REBUILDING_DAT 1
-#define REBUILDING_DEBUG 0
+#define REBUILDING_DEBUG 1
 #define CONTAINER_DEBUG 0
 #define RECURSIVE_ALLOWED 1
 
@@ -1081,6 +1081,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
     printf("Reading file info from TOC...\n");
 
     xread(toc_file, &file_count, 4, 0);
+    if(gameid == -2) file_count = swap_uint32(file_count);
     fseek(toc_file, 16, SEEK_SET);
 
     files = (build_file *)malloc(file_count * sizeof(build_file));
@@ -1122,7 +1123,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
             xread(toc_file, &zero_field, 4, 0);
             if(file_index == file_count - 1){
                 end_offset = dat_file_end_offset;
-                end_offset = end_offset - start_offset;
+                end_offset = swap_uint32(end_offset - swap_uint32(start_offset));
                 break;
             }
             xread(toc_file, &end_offset, 4, 0);
@@ -1132,7 +1133,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
                 zero_field = 1;
                 break;
             }
-            end_offset = end_offset - start_offset;
+            end_offset = swap_uint32(swap_uint32(end_offset) - swap_uint32(start_offset));
             fseek(toc_file, -4, SEEK_CUR);
             break;
         default:
@@ -1145,8 +1146,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         }
 
         actual_offset = start_offset * 0x800;
-
-        if(gameid == -2)
+        if (gameid == -2)
         {
             actual_offset = swap_uint32(start_offset) * 0x800;
         }
@@ -1227,6 +1227,10 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         }
 
         actual_offset = files[file_index].start_offset * 0x800;
+        if (gameid == -2)
+        {
+            actual_offset = swap_uint32(files[file_index].start_offset) * 0x800;
+        }
 
         if (files[file_index].zero_field == 1)
         {
@@ -1428,7 +1432,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
 int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *input_dir, BOOL recursive)
 {
     if(gameid != 1){
-        printf("Rebuilding GUT Archive is only supported for default compatibility mode games\n");
+        printf("Incompatible game for rebuilding method\n");
         printf("Reimporting files instead\n");
         return reimport_to_GUT_Archive(toc_filename, dat_filename, input_dir, recursive);
     }
@@ -1484,6 +1488,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     printf("Reading file info from TOC...\n");
 
     xread(toc_file, &file_count, 4, 0);
+    if(gameid == -2) file_count = swap_uint32(file_count);
     fseek(toc_file, 16, SEEK_SET);
 
     files = (build_file *)malloc(file_count * sizeof(build_file));
@@ -1526,7 +1531,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             xread(toc_file, &zero_field, 4, 0);
             if(file_index == file_count - 1){
                 end_offset = dat_file_end_offset;
-                end_offset = end_offset - start_offset;
+                end_offset = swap_uint32(end_offset - swap_uint32(start_offset));
                 break;
             }
             xread(toc_file, &end_offset, 4, 0);
@@ -1536,7 +1541,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                 zero_field = 1;
                 break;
             }
-            end_offset = end_offset - start_offset;
+            end_offset = swap_uint32(swap_uint32(end_offset) - swap_uint32(start_offset));
             fseek(toc_file, -4, SEEK_CUR);
             break;
         default:
@@ -1549,11 +1554,11 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         }
 
         actual_offset = start_offset * 0x800;
-
-        if(gameid == -2)
+        if (gameid == -2)
         {
             actual_offset = swap_uint32(start_offset) * 0x800;
         }
+
         if (decompressed_size == 0)
         {
             files[file_index].compressed = FALSE;
@@ -1696,6 +1701,11 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         //for imported files check if they are longer than the original, if so, add the difference to the additional offset
 
         actual_offset = (files[file_index].start_offset + additional_offset) * 0x800;
+        if (gameid == -2)
+        {
+            actual_offset = swap_uint32(files[file_index].start_offset + additional_offset) * 0x800;
+        }
+
         new_toc_offset = files[file_index].start_offset + additional_offset;
 
         if (files[file_index].zero_field == 1)
