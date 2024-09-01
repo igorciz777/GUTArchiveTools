@@ -37,30 +37,37 @@ typedef struct
     ucl_uint32 block_size;
 } build_file;
 
-typedef struct{
+typedef struct
+{
     ucl_uint start_offset;
     ucl_uint end_offset;
 } dat_file_in;
 
-void progress_bar(int percentage) {
+void progress_bar(int percentage)
+{
     int bar_width = 50;
     int pos = (percentage * bar_width) / 100;
-    
-    printf("[");  // Start of the bar
-    
-    for (int i = 0; i < bar_width; ++i) {
-        if (i < pos) {
+
+    printf("["); // Start of the bar
+
+    for (int i = 0; i < bar_width; ++i)
+    {
+        if (i < pos)
+        {
             printf("=");
-        } else {
+        }
+        else
+        {
             printf(" ");
         }
     }
-    
+
     printf("] %d%%\r", percentage);
     fflush(stdout);
 }
 
-static BOOL check_for_dat_container(char* file_data, ucl_uint file_size){
+static BOOL check_for_dat_container(char *file_data, ucl_uint file_size)
+{
     BOOL flag = TRUE;
     ucl_uint file_count;
     ucl_uint file_offset;
@@ -69,35 +76,43 @@ static BOOL check_for_dat_container(char* file_data, ucl_uint file_size){
 #if CONTAINER_DEBUG
     printf("File count: %d\n", file_count);
 #endif
-    if(file_count > 0x1000 || file_count <= 0x00){
+    if (file_count > 0x1000 || file_count <= 0x00)
+    {
         flag = FALSE;
     }
-    for(int i = 0; i < file_count && flag; i++){
+    for (int i = 0; i < file_count && flag; i++)
+    {
         memcpy(&file_offset, file_data + 4 + (i * 4), 4);
 #if CONTAINER_DEBUG
         printf("File %d offset: %08x\n", i, file_offset);
 #endif
-        if(file_offset == 0x00){
+        if (file_offset == 0x00)
+        {
             flag = FALSE;
         }
-        if(file_offset >= file_size){
+        if (file_offset >= file_size)
+        {
             flag = FALSE;
         }
         /*Kaido Racer edge case*/
-        if(file_offset == 0xFFFFFFFF){
+        if (file_offset == 0xFFFFFFFF)
+        {
             flag = FALSE;
         }
         /*Bakumatsuden edge case*/
-        if(file_count == 0x0F && file_offset == 0x29 && i < 1){
+        if (file_count == 0x0F && file_offset == 0x29 && i < 1)
+        {
             flag = FALSE;
         }
     }
-    if(flag){
+    if (flag)
+    {
         memcpy(&file_offset, file_data + 4 + (file_count * 4), 4);
 #if CONTAINER_DEBUG
         printf("Last offset (Zero check): %08x\n", file_offset);
 #endif
-        if(file_offset != 0x00){
+        if (file_offset != 0x00)
+        {
             flag = FALSE;
         }
     }
@@ -108,7 +123,8 @@ static BOOL check_for_dat_container(char* file_data, ucl_uint file_size){
     return flag;
 }
 
-int extract_legacy(const char* loc_file, const char* data_file, const char* output_dir){
+int extract_legacy(const char *loc_file, const char *data_file, const char *output_dir)
+{
     FILE *loc, *dat;
     FILE *log;
     ucl_uint file_count;
@@ -144,8 +160,10 @@ int extract_legacy(const char* loc_file, const char* data_file, const char* outp
 
     printf("Extracting Legacy Archive...\n");
 
-    while(TRUE){
-        if(file_index >= file_count){
+    while (TRUE)
+    {
+        if (file_index >= file_count)
+        {
             break;
         }
 
@@ -201,7 +219,8 @@ int extract_legacy(const char* loc_file, const char* data_file, const char* outp
     fclose(loc);
     fclose(dat);
     fclose(log);
-    if (!logs) remove("extract.log");
+    if (!logs)
+        remove("extract.log");
     return EXIT_SUCCESS;
 }
 
@@ -245,18 +264,22 @@ int build_dat_container(const char *dat_filename, const char *input_dir)
 
     printf("Rebuilding DAT Container...\n");
 
-    while(TRUE){
+    while (TRUE)
+    {
         fseek(dat_file, 4, SEEK_SET);
         fseek(dat_file, file_index * 4, SEEK_CUR);
-        if(file_index >= file_count){
+        if (file_index >= file_count)
+        {
             break;
         }
         xread(dat_file, &file_start_offset, 4, 0);
-        if(file_start_offset == 0){
+        if (file_start_offset == 0)
+        {
             break;
         }
         xread(dat_file, &file_end_offset, 4, 0);
-        if(file_end_offset == 0){
+        if (file_end_offset == 0)
+        {
             file_end_offset = dat_size;
         }
 
@@ -359,7 +382,8 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
     dat_size = ftell(dat_file);
     fseek(dat_file, 0, SEEK_SET);
 
-    if(check_correctness){
+    if (check_correctness)
+    {
         dat_data = (char *)malloc(dat_size);
         if (dat_data == NULL)
         {
@@ -371,7 +395,8 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         xread(dat_file, dat_data, dat_size, 0);
         fseek(dat_file, 0, SEEK_SET);
 
-        if(!check_for_dat_container(dat_data, dat_size)){
+        if (!check_for_dat_container(dat_data, dat_size))
+        {
             printf("Invalid DAT Container\n");
             fclose(dat_file);
             free(dat_data);
@@ -386,23 +411,26 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
 
     xread(dat_file, &file_count, 4, 0);
 
-    while(TRUE){
+    while (TRUE)
+    {
         recursive_dat = FALSE;
         fseek(dat_file, 4, SEEK_SET);
         fseek(dat_file, file_index * 4, SEEK_CUR);
-        if(file_index >= file_count){
+        if (file_index >= file_count)
+        {
             break;
         }
         xread(dat_file, &file_start_offset, 4, 0);
-        if(file_start_offset == 0){
+        if (file_start_offset == 0)
+        {
             break;
         }
         xread(dat_file, &file_end_offset, 4, 0);
-        if(file_end_offset == 0){
+        if (file_end_offset == 0)
+        {
             file_end_offset = dat_size;
         }
 
-        
 #if CONTAINER_DEBUG
         printf("File %d: Start Offset: %08x, End Offset: %08x\n", file_index, file_start_offset, file_end_offset);
 #endif
@@ -416,7 +444,8 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
 
         file_length = file_end_offset - file_start_offset;
 
-        if(file_length > dat_size - file_start_offset){
+        if (file_length > dat_size - file_start_offset)
+        {
             break;
         }
 
@@ -440,8 +469,10 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         file_extension[0] = 0;
         memcpy(file_header, file_data, 32);
         strncpy(file_extension, find_file_extension(file_header), 5);
-        if(strcmp(file_extension, "bin") == 0){
-            if(check_for_dat_container(file_data, file_length)){
+        if (strcmp(file_extension, "bin") == 0)
+        {
+            if (check_for_dat_container(file_data, file_length))
+            {
                 strncpy(file_extension, "dat", 5);
                 recursive_dat = TRUE;
             }
@@ -461,7 +492,8 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
         xwrite(output_file, file_data, file_length);
         fclose(output_file);
         /*recursive dat unpacking for dats inside dats (thanks genki)*/
-        if(recursive_dat){
+        if (recursive_dat)
+        {
             char dat_output_dir[256];
             sprintf(dat_output_dir, "%s/%08d", output_dir, file_index);
             extract_dat_container(filename, dat_output_dir, FALSE);
@@ -478,12 +510,13 @@ int extract_dat_container(const char *dat_filename, const char *output_dir, BOOL
     fwrite(log_line, 1, strlen(log_line), log);
     fclose(dat_file);
     fclose(log);
-    if (!logs) remove("dat_extract.log");
+    if (!logs)
+        remove("dat_extract.log");
     return EXIT_SUCCESS;
 }
 
 /*TODO: taken straight from uclpack, needs a lighter alternative rewrite*/
-int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char *filename , BOOL *dat_container)
+int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char *filename, BOOL *dat_container)
 {
     int r;
     int method;
@@ -617,8 +650,10 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
                 fclose(fo);
                 memcpy(header, out, 32);
                 strncpy(file_extension, find_file_extension(header), 5);
-                if(strcmp(file_extension, "bin") == 0){
-                    if(check_for_dat_container((char*)out, swap_uint16(out_len))){
+                if (strcmp(file_extension, "bin") == 0)
+                {
+                    if (check_for_dat_container((char *)out, swap_uint16(out_len)))
+                    {
                         strncpy(file_extension, "dat", 5);
                         *dat_container = TRUE;
                     }
@@ -784,7 +819,6 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     ucl_uint file_count;
     ucl_uint start_offset, compressed_size, end_offset, zero_field, decompressed_size;
     ucl_uint actual_offset, actual_length;
-    ucl_uint dat_file_end_offset;
     int file_index = 0;
     int r = -1;
     BOOL compressed = TRUE;
@@ -807,14 +841,11 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         return EXIT_FAILURE;
     }
 
-    fseek(dat_file, 0, SEEK_END);
-    dat_file_end_offset = ftell(dat_file) / 0x800;
-    fseek(dat_file, 0, SEEK_SET);
-
     log = fopen("decomp.log", "w");
 
     xread(toc_file, &file_count, 4, 0);
-    if(gameid == -2) file_count = swap_uint32(file_count);
+    if (gameid == -2)
+        file_count = swap_uint32(file_count);
     fseek(toc_file, 16, SEEK_SET);
 
 #ifdef _WIN32
@@ -842,20 +873,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             xread(toc_file, &compressed_size, 4, 0);
             xread(toc_file, &decompressed_size, 4, 0);
             xread(toc_file, &zero_field, 4, 0);
-            if(file_index == file_count - 1){
-                end_offset = dat_file_end_offset;
-                end_offset = end_offset - start_offset;
-                break;
-            }
-            xread(toc_file, &end_offset, 4, 0);
-            if (end_offset == 0)
-            {
-                fseek(toc_file, -4, SEEK_CUR);
-                zero_field = 1;
-                break;
-            }
-            end_offset = end_offset - start_offset;
-            fseek(toc_file, -4, SEEK_CUR);
+            end_offset = 1 + compressed_size / 0x800;
             break;
         case -2: /*ITC Big endian*/
             xread(toc_file, &start_offset, 4, 0);
@@ -864,20 +882,10 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             xread(toc_file, &decompressed_size, 4, 0);
             decompressed_size = swap_uint32(decompressed_size);
             xread(toc_file, &zero_field, 4, 0);
-            if(file_index == file_count - 1){
-                end_offset = dat_file_end_offset;
-                end_offset = swap_uint32(end_offset - swap_uint32(start_offset));
-                break;
-            }
-            xread(toc_file, &end_offset, 4, 0);
-            if (end_offset == 0)
-            {
-                fseek(toc_file, -4, SEEK_CUR);
-                zero_field = 1;
-                break;
-            }
-            end_offset = swap_uint32(swap_uint32(end_offset) - swap_uint32(start_offset));
-            fseek(toc_file, -4, SEEK_CUR);
+            if (zero_field != 0)
+                end_offset = 0;
+            else
+                end_offset = swap_uint32(1 + compressed_size / 0x800);
             break;
         default:
             xread(toc_file, &start_offset, 4, 0);
@@ -898,6 +906,11 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
 
         if (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2))
         {
+            zero_field = 1;
+        }
+
+        if (gameid == -2 && file_index == 0)
+        { /*the file 0 is just cut-off repeat of file 1 in ITC*/
             zero_field = 1;
         }
 
@@ -938,8 +951,10 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             file_extension[0] = 0;
             memcpy(file_header, compressed_file_data, 32);
             strncpy(file_extension, find_file_extension(file_header), 5);
-            if(strcmp(file_extension, "bin") == 0){
-                if(check_for_dat_container(compressed_file_data, actual_length)){
+            if (strcmp(file_extension, "bin") == 0)
+            {
+                if (check_for_dat_container(compressed_file_data, actual_length))
+                {
                     strncpy(file_extension, "dat", 5);
                     dat_container = TRUE;
                 }
@@ -959,7 +974,8 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             fclose(output_file);
 
             /*recursive dat unpacking*/
-            if(dat_container && recursive){
+            if (dat_container && recursive)
+            {
                 char dat_output_dir[256];
                 sprintf(dat_output_dir, "%s/%08d", output_dir, file_index);
                 extract_dat_container(filename, dat_output_dir, FALSE);
@@ -1009,7 +1025,8 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         fclose(output_file);
         /*recursive dat unpacking*/
 
-        if(dat_container && recursive){
+        if (dat_container && recursive)
+        {
             char dat_output_dir[256];
             /*stupid fix*/
             char filename2[261];
@@ -1025,7 +1042,8 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
     fclose(toc_file);
     fclose(dat_file);
     fclose(log);
-    if (!logs) remove("decomp.log");
+    if (!logs)
+        remove("decomp.log");
     return EXIT_SUCCESS;
 }
 
@@ -1041,7 +1059,6 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
     ucl_uint start_offset, compressed_size, end_offset, zero_field, decompressed_size;
     ucl_uint actual_offset;
     ucl_uint32 new_len, new_decompressed_size;
-    ucl_uint dat_file_end_offset;
     int file_index = 0;
     int r = -1;
 
@@ -1062,10 +1079,6 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         return EXIT_FAILURE;
     }
 
-    fseek(dat_file, 0, SEEK_END);
-    dat_file_end_offset = ftell(dat_file) / 0x800;
-    fseek(dat_file, 0, SEEK_SET);
-
     dir = opendir(input_dir);
 
     if (dir == NULL)
@@ -1081,7 +1094,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
     printf("Reading file info from TOC...\n");
 
     xread(toc_file, &file_count, 4, 0);
-    if(gameid == -2) file_count = swap_uint32(file_count);
+    if (gameid == -2)
+        file_count = swap_uint32(file_count);
     fseek(toc_file, 16, SEEK_SET);
 
     files = (build_file *)malloc(file_count * sizeof(build_file));
@@ -1099,20 +1113,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
             xread(toc_file, &compressed_size, 4, 0);
             xread(toc_file, &decompressed_size, 4, 0);
             xread(toc_file, &zero_field, 4, 0);
-            if(file_index == file_count - 1){
-                end_offset = dat_file_end_offset;
-                end_offset = end_offset - start_offset;
-                break;
-            }
-            xread(toc_file, &end_offset, 4, 0);
-            if (end_offset == 0)
-            {
-                fseek(toc_file, -4, SEEK_CUR);
-                zero_field = 1;
-                break;
-            }
-            end_offset = end_offset - start_offset;
-            fseek(toc_file, -4, SEEK_CUR);
+            end_offset = 1 + compressed_size / 0x800;
             break;
         case -2: /*ITC Big endian*/
             xread(toc_file, &start_offset, 4, 0);
@@ -1121,20 +1122,10 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
             xread(toc_file, &decompressed_size, 4, 0);
             decompressed_size = swap_uint32(decompressed_size);
             xread(toc_file, &zero_field, 4, 0);
-            if(file_index == file_count - 1){
-                end_offset = dat_file_end_offset;
-                end_offset = swap_uint32(end_offset - swap_uint32(start_offset));
-                break;
-            }
-            xread(toc_file, &end_offset, 4, 0);
-            if (end_offset == 0)
-            {
-                fseek(toc_file, -4, SEEK_CUR);
-                zero_field = 1;
-                break;
-            }
-            end_offset = swap_uint32(swap_uint32(end_offset) - swap_uint32(start_offset));
-            fseek(toc_file, -4, SEEK_CUR);
+            if (zero_field != 0)
+                end_offset = 0;
+            else
+                end_offset = swap_uint32(1 + compressed_size / 0x800);
             break;
         default:
             xread(toc_file, &start_offset, 4, 0);
@@ -1171,7 +1162,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         files[file_index].zero_field = zero_field;
         files[file_index].decompressed_size = decompressed_size;
 
-        if(files[file_index].compressed == TRUE){
+        if (files[file_index].compressed == TRUE)
+        {
             fseek(dat_file, actual_offset, SEEK_SET);
             fseek(dat_file, 14, SEEK_CUR);
             files[file_index].block_size = xread32(dat_file);
@@ -1187,7 +1179,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
 
     while ((entry = readdir(dir)) != NULL)
     {
-        if(strstr(entry->d_name, ".") == NULL){
+        if (strstr(entry->d_name, ".") == NULL)
+        {
             continue;
         }
         if (entry == NULL || entry->d_name[0] == '.')
@@ -1198,15 +1191,17 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         /*check if dat*/
         if (strstr(entry->d_name, ".dat") != NULL)
         {
-            if(recursive == TRUE){
-                
+            if (recursive == TRUE)
+            {
+
                 char dat_name[320];
                 char dir_name[320];
                 sprintf(dat_name, "%s%s", input_dir, entry->d_name);
                 printf("Processing DAT file: %s\n", dat_name);
                 strcpy(dir_name, dat_name);
                 strtok(dir_name, ".");
-                if(build_dat_container(dat_name, dir_name) != EXIT_SUCCESS){
+                if (build_dat_container(dat_name, dir_name) != EXIT_SUCCESS)
+                {
                     printf("Skipping...\n");
                 }
             }
@@ -1258,7 +1253,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
 
         if (!files[file_index].compressed)
         {
-            if(new_decompressed_size > files[file_index].compressed_size){
+            if (new_decompressed_size > files[file_index].compressed_size)
+            {
                 printf("New file size is larger than the original, might break the archive!\n");
             }
             fseek(dat_file, actual_offset, SEEK_SET);
@@ -1334,7 +1330,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         }
 
         new_len = ftell(temp_compressed_file);
-        if(new_len > files[file_index].compressed_size){
+        if (new_len > files[file_index].compressed_size)
+        {
             printf("New file size is larger than the original, might break the archive!\n");
         }
         files[file_index].compressed_size = new_len;
@@ -1423,7 +1420,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
     fclose(toc_file);
     fclose(dat_file);
     fclose(log);
-    if (!logs) remove("reimport.log");
+    if (!logs)
+        remove("reimport.log");
     free(files);
     closedir(dir);
     return EXIT_SUCCESS;
@@ -1431,7 +1429,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
 
 int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *input_dir, BOOL recursive)
 {
-    if(gameid != 1){
+    if (gameid != 1 && gameid != -2)
+    {
         printf("Incompatible game for rebuilding method\n");
         printf("Reimporting files instead\n");
         return reimport_to_GUT_Archive(toc_filename, dat_filename, input_dir, recursive);
@@ -1448,7 +1447,6 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     ucl_uint new_toc_offset;
     ucl_uint additional_offset = 0, new_additional_offset;
     ucl_uint32 new_len, old_len, new_decompressed_size;
-    ucl_uint dat_file_end_offset;
     int file_index = 0;
     int r = -1;
 
@@ -1469,10 +1467,6 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         return EXIT_FAILURE;
     }
 
-    fseek(dat_file, 0, SEEK_END);
-    dat_file_end_offset = ftell(dat_file) / 0x800;
-    fseek(dat_file, 0, SEEK_SET);
-
     dir = opendir(input_dir);
 
     if (dir == NULL)
@@ -1488,7 +1482,8 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     printf("Reading file info from TOC...\n");
 
     xread(toc_file, &file_count, 4, 0);
-    if(gameid == -2) file_count = swap_uint32(file_count);
+    if (gameid == -2)
+        file_count = swap_uint32(file_count);
     fseek(toc_file, 16, SEEK_SET);
 
     files = (build_file *)malloc(file_count * sizeof(build_file));
@@ -1507,20 +1502,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             xread(toc_file, &compressed_size, 4, 0);
             xread(toc_file, &decompressed_size, 4, 0);
             xread(toc_file, &zero_field, 4, 0);
-            if(file_index == file_count - 1){
-                end_offset = dat_file_end_offset;
-                end_offset = end_offset - start_offset;
-                break;
-            }
-            xread(toc_file, &end_offset, 4, 0);
-            if (end_offset == 0)
-            {
-                fseek(toc_file, -4, SEEK_CUR);
-                zero_field = 1;
-                break;
-            }
-            end_offset = end_offset - start_offset;
-            fseek(toc_file, -4, SEEK_CUR);
+            end_offset = 1 + compressed_size / 0x800;
             break;
         case -2: /*ITC Big endian*/
             xread(toc_file, &start_offset, 4, 0);
@@ -1529,20 +1511,10 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             xread(toc_file, &decompressed_size, 4, 0);
             decompressed_size = swap_uint32(decompressed_size);
             xread(toc_file, &zero_field, 4, 0);
-            if(file_index == file_count - 1){
-                end_offset = dat_file_end_offset;
-                end_offset = swap_uint32(end_offset - swap_uint32(start_offset));
-                break;
-            }
-            xread(toc_file, &end_offset, 4, 0);
-            if (end_offset == 0)
-            {
-                fseek(toc_file, -4, SEEK_CUR);
-                zero_field = 1;
-                break;
-            }
-            end_offset = swap_uint32(swap_uint32(end_offset) - swap_uint32(start_offset));
-            fseek(toc_file, -4, SEEK_CUR);
+            if (zero_field != 0)
+                end_offset = 0;
+            else
+                end_offset = swap_uint32(1 + compressed_size / 0x800);
             break;
         default:
             xread(toc_file, &start_offset, 4, 0);
@@ -1557,6 +1529,11 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         if (gameid == -2)
         {
             actual_offset = swap_uint32(start_offset) * 0x800;
+        }
+
+        if (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2))
+        {
+            zero_field = 1;
         }
 
         if (decompressed_size == 0)
@@ -1574,7 +1551,8 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         files[file_index].zero_field = zero_field;
         files[file_index].decompressed_size = decompressed_size;
 
-        if(files[file_index].compressed == TRUE){
+        if (files[file_index].compressed == TRUE)
+        {
             fseek(dat_file, actual_offset, SEEK_SET);
             fseek(dat_file, 14, SEEK_CUR);
             files[file_index].block_size = xread32(dat_file);
@@ -1590,7 +1568,8 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
     while ((entry = readdir(dir)) != NULL)
     {
-        if(strstr(entry->d_name, ".") == NULL){
+        if (strstr(entry->d_name, ".") == NULL)
+        {
             continue;
         }
         if (entry == NULL || entry->d_name[0] == '.')
@@ -1601,15 +1580,16 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         /*check if dat*/
         if (strstr(entry->d_name, ".dat") != NULL)
         {
-            if(recursive == TRUE){
-                
+            if (recursive == TRUE)
+            {
                 char dat_name[320];
                 char dir_name[320];
                 sprintf(dat_name, "%s%s", input_dir, entry->d_name);
                 printf("Processing DAT file: %s\n", dat_name);
                 strcpy(dir_name, dat_name);
                 strtok(dir_name, ".");
-                if(build_dat_container(dat_name, dir_name) != EXIT_SUCCESS){
+                if (build_dat_container(dat_name, dir_name) != EXIT_SUCCESS)
+                {
                     printf("Skipping...\n");
                 }
             }
@@ -1642,16 +1622,35 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         free(files);
         return EXIT_FAILURE;
     }
-    for(file_index = 0; file_index < file_count; file_index++){
-
+    for (file_index = 0; file_index < file_count; file_index++)
+    {
         if (files[file_index].importing == FALSE)
         {
-            if(files[file_index].zero_field == 0 || gameid != 1)
+            if (files[file_index].zero_field == 0)
             {
-                //move other files from old dat to new dat with added offset
-                fseek(dat_file, files[file_index].start_offset * 0x800, SEEK_SET);
-                fseek(new_dat_file, (files[file_index].start_offset + additional_offset) * 0x800, SEEK_SET);
-                char *file_data = (char *)malloc(files[file_index].compressed_size);
+                // move other files from old dat to new dat with added offset
+                if (gameid == -2)
+                {
+                    fseek(dat_file, swap_uint32(files[file_index].start_offset) * 0x800, SEEK_SET);
+                    fseek(new_dat_file, (swap_uint32(files[file_index].start_offset) + additional_offset) * 0x800, SEEK_SET);
+                }
+                else
+                {
+                    fseek(dat_file, files[file_index].start_offset * 0x800, SEEK_SET);
+                    fseek(new_dat_file, (files[file_index].start_offset + additional_offset) * 0x800, SEEK_SET);
+                }
+
+                ucl_uint actual_length;
+                if(gameid == -2)
+                {
+                    actual_length = swap_uint32(files[file_index].end_offset) * 0x800;
+                }
+                else
+                {
+                    actual_length = files[file_index].end_offset * 0x800;
+                }
+
+                char *file_data = (char *)malloc(actual_length);
                 if (file_data == NULL)
                 {
                     perror("Failed to allocate memory");
@@ -1661,17 +1660,24 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                     free(files);
                     return EXIT_FAILURE;
                 }
-                xread(dat_file, file_data, files[file_index].compressed_size, 0);
-                xwrite(new_dat_file, file_data, files[file_index].compressed_size);
+                xread(dat_file, file_data, actual_length, 0);
+                xwrite(new_dat_file, file_data, actual_length);
                 free(file_data);
-
             }
 
             char log_line[256];
-            sprintf(log_line, "Unchanged File %d: Old TOC: %08x, New TOC: %08x, Old DAT: %08x, New DAT: %08x\n", file_index, files[file_index].start_offset, files[file_index].start_offset + additional_offset, files[file_index].start_offset * 0x800, (files[file_index].start_offset + additional_offset) * 0x800);
+            if (gameid == -2)
+            {
+                sprintf(log_line, "Unchanged File %d: Old TOC: %08x, New TOC: %08x, Old DAT: %08x, New DAT: %08x\n", file_index, swap_uint32(files[file_index].start_offset), swap_uint32(files[file_index].start_offset) + additional_offset, swap_uint32(files[file_index].start_offset) * 0x800, (swap_uint32(files[file_index].start_offset) + additional_offset) * 0x800);
+            }
+            else
+            {
+                sprintf(log_line, "Unchanged File %d: Old TOC: %08x, New TOC: %08x, Old DAT: %08x, New DAT: %08x\n", file_index, files[file_index].start_offset, files[file_index].start_offset + additional_offset, files[file_index].start_offset * 0x800, (files[file_index].start_offset + additional_offset) * 0x800);
+            }
             fwrite(log_line, 1, strlen(log_line), log);
 
-            if(additional_offset > 0){
+            if (additional_offset > 0 && files[file_index].zero_field == 0)
+            {
                 /*write changes to .toc*/
                 fseek(toc_file, 0, SEEK_SET);
                 fseek(toc_file, 16, SEEK_SET);
@@ -1684,7 +1690,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                     break;
                 case -2: /*ITC Big endian*/
                     fseek(toc_file, file_index * 16, SEEK_CUR);
-                    xwrite32(toc_file, files[file_index].start_offset + additional_offset);
+                    xwrite32(toc_file, swap_uint32(files[file_index].start_offset) + additional_offset);
                     fseek(toc_file, 12, SEEK_CUR);
                     break;
                 default:
@@ -1698,15 +1704,16 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             }
             continue;
         }
-        //for imported files check if they are longer than the original, if so, add the difference to the additional offset
+        // for imported files check if they are longer than the original, if so, add the difference to the additional offset
 
         actual_offset = (files[file_index].start_offset + additional_offset) * 0x800;
+        new_toc_offset = files[file_index].start_offset + additional_offset;
+
         if (gameid == -2)
         {
-            actual_offset = swap_uint32(files[file_index].start_offset + additional_offset) * 0x800;
+            actual_offset = (swap_uint32(files[file_index].start_offset) + additional_offset) * 0x800;
+            new_toc_offset = swap_uint32(files[file_index].start_offset) + additional_offset;
         }
-
-        new_toc_offset = files[file_index].start_offset + additional_offset;
 
         if (files[file_index].zero_field == 1)
         {
@@ -1751,9 +1758,21 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
             new_additional_offset = additional_offset;
 
-            while(new_toc_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
-                new_additional_offset += 1;
-                files[file_index].end_offset += 1;
+            if (gameid == -2)
+            {
+                while (new_toc_offset * 0x800 + new_decompressed_size > (swap_uint32(files[file_index].start_offset) + new_additional_offset) * 0x800)
+                {
+                    new_additional_offset += 1;
+                    files[file_index].end_offset += 1;
+                }
+            }
+            else
+            {
+                while (new_toc_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800)
+                {
+                    new_additional_offset += 1;
+                    files[file_index].end_offset += 1;
+                }
             }
 
             xread(input_file, uncompressed_file_data, new_decompressed_size, 0);
@@ -1775,7 +1794,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
                 break;
             case -2: /*ITC Big endian*/
                 fseek(toc_file, file_index * 16, SEEK_CUR);
-                xwrite32(toc_file, files[file_index].start_offset + additional_offset);
+                xwrite32(toc_file, swap_uint32(files[file_index].start_offset) + additional_offset);
                 xwrite32(toc_file, files[file_index].compressed_size);
                 fseek(toc_file, 8, SEEK_CUR);
                 break;
@@ -1789,7 +1808,14 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             }
             /*write to log*/
             char log_line[256];
-            sprintf(log_line, "Uncompressed File %d, TOC offset %08x, Old DAT offset %08x, New DAT offset %08x, New size: %d\n", file_index, files[file_index].start_offset, files[file_index].start_offset * 0x800, actual_offset, files[file_index].compressed_size);
+            if (gameid == -2)
+            {
+                sprintf(log_line, "Uncompressed File %d, TOC offset %08x, Old DAT offset %08x, New DAT offset %08x, New size: %d\n", file_index, files[file_index].start_offset, files[file_index].start_offset * 0x800, actual_offset, files[file_index].compressed_size);
+            }
+            else
+            {
+                sprintf(log_line, "Uncompressed File %d, TOC offset %08x, Old DAT offset %08x, New DAT offset %08x, New size: %d\n", file_index, files[file_index].start_offset, files[file_index].start_offset * 0x800, actual_offset, files[file_index].compressed_size);
+            }
             fwrite(log_line, 1, strlen(log_line), log);
 
             additional_offset = new_additional_offset;
@@ -1828,15 +1854,28 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 #if REBUILDING_DEBUG == 1
         printf("[UCL]New size: %d\n", new_len);
         printf("[UCL]Old size: %d\n", files[file_index].compressed_size);
+        printf("[UCL]additional_offset: %d\n", additional_offset);
         printf("[UCL]start_offset + new_len: %d\n", files[file_index].start_offset * 0x800 + new_len);
         printf("[UCL]start_offset + additional_offset: %d\n", (files[file_index].start_offset + additional_offset + files[file_index].end_offset) * 0x800);
 #endif
 
         new_additional_offset = additional_offset;
 
-        while(new_toc_offset * 0x800 + new_len > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800){
-            new_additional_offset += 1;
-            files[file_index].end_offset += 1;
+        if (gameid == -2)
+        {
+            while (new_toc_offset * 0x800 + new_len > (swap_uint32(files[file_index].start_offset) + new_additional_offset) * 0x800)
+            {
+                new_additional_offset += 1;
+                files[file_index].end_offset += 1;
+            }
+        }
+        else
+        {
+            while (new_toc_offset * 0x800 + new_len > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800)
+            {
+                new_additional_offset += 1;
+                files[file_index].end_offset += 1;
+            }
         }
         old_len = files[file_index].compressed_size;
         files[file_index].compressed_size = new_len;
@@ -1856,12 +1895,10 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 
         fseek(temp_compressed_file, 0, SEEK_SET);
 
-
         xread(temp_compressed_file, compressed_file_data, new_len, 0);
         fseek(new_dat_file, 0, SEEK_SET);
         fseek(new_dat_file, actual_offset, SEEK_CUR);
         xwrite(new_dat_file, compressed_file_data, new_len);
-
 
         free(compressed_file_data);
 
@@ -1882,7 +1919,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             break;
         case -2: /*ITC Big endian*/
             fseek(toc_file, file_index * 16, SEEK_CUR);
-            xwrite32(toc_file, files[file_index].start_offset + additional_offset);
+            xwrite32(toc_file, swap_uint32(files[file_index].start_offset) + additional_offset);
             xwrite32(toc_file, files[file_index].compressed_size);
             xwrite32(toc_file, files[file_index].decompressed_size);
             fseek(toc_file, 4, SEEK_CUR);
@@ -1898,7 +1935,14 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         }
         /*write to log*/
         char log_line[256];
-        sprintf(log_line, "Compressed File %d, TOC offset %08x, Old DAT offset %08x, New DAT offset %08x, Old compressed size: %d, New compressed size: %d, Decompressed size: %d\n", file_index, files[file_index].start_offset, files[file_index].start_offset * 0x800, actual_offset, old_len, new_len, files[file_index].decompressed_size);
+        if (gameid == -2)
+        {
+            sprintf(log_line, "Compressed File %d, TOC offset %08x, Old DAT offset %08x, New DAT offset %08x, Old compressed size: %d, New compressed size: %d, Decompressed size: %d\n", file_index, files[file_index].start_offset, files[file_index].start_offset * 0x800, actual_offset, old_len, new_len, files[file_index].decompressed_size);
+        }
+        else
+        {
+            sprintf(log_line, "Compressed File %d, TOC offset %08x, Old DAT offset %08x, New DAT offset %08x, Old compressed size: %d, New compressed size: %d, Decompressed size: %d\n", file_index, files[file_index].start_offset, files[file_index].start_offset * 0x800, actual_offset, old_len, new_len, files[file_index].decompressed_size);
+        }
         fwrite(log_line, 1, strlen(log_line), log);
 
         additional_offset = new_additional_offset;
@@ -1909,12 +1953,13 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     fclose(toc_file);
     fclose(dat_file);
 
-    //delete old dat file and rename new dat file
+    // delete old dat file and rename new dat file
     remove(dat_filename);
     fclose(new_dat_file);
     rename("new.dat", dat_filename);
     fclose(log);
-    if (!logs) remove("rebuild.log");
+    if (!logs)
+        remove("rebuild.log");
     free(files);
     closedir(dir);
     return EXIT_SUCCESS;
@@ -1973,11 +2018,15 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 6){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 6)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         if (REBUILDING_ALLOWED == 0)
         {
@@ -2001,15 +2050,19 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 6){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 6)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         result = decompress_GUT_Archive(toc_file, dat_file, output_dir, FALSE);
     }
-    else if(strcmp(argv[1], "-cd") == 0)
+    else if (strcmp(argv[1], "-cd") == 0)
     {
         if (argc < 4)
         {
@@ -2021,19 +2074,23 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 5){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 5)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         strncpy(dat_file, argv[2], 255);
         strncpy(output_dir, argv[3], 255);
         result = extract_dat_container(dat_file, output_dir, TRUE);
     }
-    else if(strcmp(argv[1], "-cr") == 0)
+    else if (strcmp(argv[1], "-cr") == 0)
     {
-        if(REBUILDING_DAT == 0)
+        if (REBUILDING_DAT == 0)
         {
             printf("Rebuilding .dat containers is disabled in this release, still in development\n");
             return 1;
@@ -2048,17 +2105,21 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 5){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 5)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         strncpy(dat_file, argv[2], 255);
         strncpy(directory, argv[3], 255);
         result = build_dat_container(dat_file, directory);
     }
-    else if(strcmp(argv[1], "-dr") == 0)
+    else if (strcmp(argv[1], "-dr") == 0)
     {
         if (argc < 5)
         {
@@ -2070,23 +2131,27 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 6){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 6)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
         strncpy(output_dir, argv[4], 255);
-        if(RECURSIVE_ALLOWED == 0)
+        if (RECURSIVE_ALLOWED == 0)
         {
             printf("Recursive extraction is disabled in this release, still in development\n");
             return 1;
         }
         result = decompress_GUT_Archive(toc_file, dat_file, output_dir, TRUE);
     }
-    else if(strcmp(argv[1], "-rr") == 0)
+    else if (strcmp(argv[1], "-rr") == 0)
     {
         if (argc < 5)
         {
@@ -2098,23 +2163,27 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 6){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 6)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
         strncpy(directory, argv[4], 255);
-        if(RECURSIVE_ALLOWED == 0 || REBUILDING_DAT == 0)
+        if (RECURSIVE_ALLOWED == 0 || REBUILDING_DAT == 0)
         {
             printf("Recursive rebuilding is disabled in this release, still in development\n");
             return 1;
         }
         result = rebuild_GUT_Archive(toc_file, dat_file, directory, TRUE);
     }
-    else if(strcmp(argv[1], "-l") == 0)
+    else if (strcmp(argv[1], "-l") == 0)
     {
         if (argc < 5)
         {
@@ -2126,11 +2195,15 @@ int __acc_cdecl_main main(int argc, char *argv[])
         {
             char arg[5];
             strncpy(arg, argv[5], 4);
-            if(arg[1] != 'l') gameid = atoi(arg);
-            else if(strcmp(arg, "-log") == 0) logs = TRUE;
+            if (arg[1] != 'l')
+                gameid = atoi(arg);
+            else if (strcmp(arg, "-log") == 0)
+                logs = TRUE;
         }
-        if(argc > 6){
-            if(strcmp(argv[6], "-log") == 0) logs = TRUE;
+        if (argc > 6)
+        {
+            if (strcmp(argv[6], "-log") == 0)
+                logs = TRUE;
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
