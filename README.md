@@ -61,26 +61,26 @@ Extracting BUILD.DAT recursively
 
 :heavy_minus_sign: - Unrelated to the game
 
-| **Name**                                     | **Serial** | **System** | **Extract**        | **Rebuild**        | **Reimport**       | **Comp. flag** |
-|:--------------------------------------------:|:----------:|:----------:|:------------------:|:------------------:|:------------------:|:--------------:|
-| Fu-un Bakumatsu-den                          | SLPM 61096 | PS2        | :question:         | :x:                | :heavy_check_mark: |                |
-| Fu-un Shinsengumi                            | SLKA 25139 | PS2        | :question:         | :question:         | :question:         |                |
-| Import Tuner Challenge                       | SLUS 21394 | X360       | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: | -2             |
-| Kaido Racer                                  | SLES 53191 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
-| Kaido Racer 2                                | SLES 53900 | PS2        | :heavy_check_mark: | :x:                | :heavy_check_mark: | -0             |
-| Kaidou Battle - Nikko, Haruna, Rokko, Hakone | SLPM 65246 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
-| Kaidou Battle - Touge no Densetsu            | SLPM 61121 | PS2        | :heavy_check_mark: | :x:                | :heavy_check_mark: | -0             |
-| Kaidou Battle 1 Taikenban Demo               | SLPM 60195 | PS2        | :heavy_check_mark: | :x:                | :question:         | -3             |
-| Kaidou Battle 2 - Chain Reaction             | SLPM 60228 | PS2        | :x:                | :x:                | :x:                |                |
-| Ninkyouden: Toseinin Ichidaiki               | SLPM 61144 | PS2        | :question:         | :x:                | :question:         | -0             |
-| Racing Battle: C1 Grand Prix                 | SLPM 65897 | PS2        | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
-| Racing Battle: C1 Grand Prix Taikenban       | SLPM 61115 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
-| Shutokou Battle 01                           | SLPM 65308 | PS2        | :heavy_check_mark: | :question:         | :question:         | -1             |
-| Street Supremacy                             | ULUS 10069 | PSP        | :heavy_check_mark: | :question:         | :question:         |                |
-| Tokyo Xtreme Racer 3                         | SLUS 20831 | PS2        | :heavy_check_mark: | :question:         | :question:         | -1             |
-| Tokyo Xtreme Racer Drift                     | SLUS 21236 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
-| Tokyo Xtreme Racer DRIFT 2                   | SLUS 21394 | PS2        | :heavy_check_mark: | :x:                | :heavy_check_mark: | -0             |
-| Wangan Midnight Portable                     | ULJM 05264 | PSP        | :heavy_check_mark: | :x:                | :question:         | -0             |
+|                     **Name**                    | **Serial** | **System** |     **Extract**    |     **Rebuild**    |    **Reimport**    | **Comp. flag** |
+|:-----------------------------------------------:|:----------:|:----------:|:------------------:|:------------------:|:------------------:|:--------------:|
+| Import Tuner Challenge                          | SLUS 21394 |     X360   | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -2       |
+| Racing Battle: C1 Grand Prix                    | SLPM 65897 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
+| Racing Battle: C1 Grand Prix Taikenban          | SLPM 61115 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
+| Street Supremacy                                | ULUS 10069 |     PSP    | :heavy_check_mark: |     :question:     |     :question:     |                |
+| Shutokou Battle 01                              | SLPM 65308 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |       -1       |
+| Tokyo Xtreme Racer 3                            | SLUS 20831 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |       -1       |
+| Tokyo Xtreme Racer Drift                        | SLUS 21236 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
+| Kaido Racer                                     | SLES 53191 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
+| Kaidou Battle - Nikko, Haruna, Rokko, Hakone    | SLPM 65246 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
+| Kaidou Battle 1 Taikenban Demo                  | SLPM 60195 |     PS2    | :heavy_check_mark: |         :x:        |     :question:     |       -3       |
+| Wangan Midnight Portable                        | ULJM 05264 |     PSP    | :heavy_check_mark: |         :x:        |     :question:     |       -0       |
+| Kaido Racer 2                                   | SLES 53900 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
+| Kaidou Battle - Touge no Densetsu               | SLPM 61121 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
+| Tokyo Xtreme Racer DRIFT 2                      | SLUS 21394 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
+| Fu-un Shinsengumi                               | SLKA 25139 |     PS2    |     :question:     |     :question:     |     :question:     |                |
+| Fu-un Bakumatsu-den                             | SLPM 61096 |     PS2    |     :question:     |         :x:        |     :question:     |                |
+| Ninkyouden: Toseinin Ichidaiki                  | SLPM 61144 |     PS2    |     :question:     |         :x:        |     :question:     |       -0       |
+| Kaidou Battle 2 - Chain Reaction                | SLPM 60228 |     PS2    |         :x:        |         :x:        |         :x:        |                |
 
 
 
