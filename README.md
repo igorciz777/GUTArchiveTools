@@ -21,6 +21,7 @@ gut_archive [mode] -0,... [log]
 - **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu
 - **-1**: Tokyo Xtreme Racer 3, Shutokou Battle 01
 - **-2**: Import Tuner Challenge, Shutokou Battle X
+- **-3**: Kaidou Battle 1 Taikenban
 
 ### Logs
 - **-log**: Save a log file after decompression/rebuilding
