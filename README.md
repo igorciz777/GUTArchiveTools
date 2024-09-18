@@ -68,7 +68,7 @@ Extracting BUILD.DAT recursively
 | Kaido Racer                                     | SLES 53191 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Kaido Battle (Korea)                            | SLKA 25063 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Kaidou Battle - Nikko, Haruna, Rokko, Hakone    | SLPM 65246 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
-| Kaidou Battle 2 - Chain Reaction                | SLPM 60228 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
+| Kaidou Battle 2 - Chain Reaction                | SLPM 65514 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Racing Battle: C1 Grand Prix                    | SLPM 65897 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Racing Battle: C1 Grand Prix Taikenban          | SLPM 61115 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Shutokou Battle X                               | GE-2001    |     X360   | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -2       |
@@ -80,7 +80,7 @@ Extracting BUILD.DAT recursively
 | Kaidou Battle - Touge no Densetsu               | SLPM 61121 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
 | Ninkyouden: Toseinin Ichidaiki Taikenban        | SLPM 61144 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
 | Tokyo Xtreme Racer DRIFT 2                      | SLUS 21394 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
-| Wangan Midnight Portable                        | ULJM 05264 |     PSP    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
+| Wangan Midnight Portable                        | ULJM 05264 |     PSP    | :heavy_check_mark: |         :x:        |     :question:     |       -0       |
 | Kaidou Battle 2 Taikenban                       | SLPM 60228 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |                |
 | Shutokou Battle 01                              | SLPM 65308 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |       -1       |
 | Shutokou Battle 01 Taikenban                    | SLPM 60206 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |                |
