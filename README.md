@@ -51,28 +51,37 @@ Extracting BUILD.DAT recursively
 .\gut_archive.exe -dr .\BUILD.TOC .\BUILD.DAT BUILD_OUT
 ```
 
-## Compatible games
-- Kaido Racer (SLES-53191)
-- Kaido Racer 2 (SLES-53900) - same as txrd2 but different file count, use -0
-- Kaidou Battle - Touge no Densetsu (SLPM-61121) - same as txrd2 but different file count, use -0
-- Kaidou Battle - Nikko, Haruna, Rokko, Hakone (SLPM-65246) (SLKA-25063)
-- Fu-un Bakumatsu-den (SLPM-61096)
-- RACING BATTLE -C1 GRAND PRIX- (SLPM-65897) (SLPM-61115)
-- Street Supremacy (ULUS-10069) - no file types defined yet
-- Shutokou Battle 01 (SLPM-65308) (SLPM-60206), use -1 to skip a duped block of data in file id 1 (only in release version, demo works with default)
-- Tokyo Xtreme Racer 3 (SLUS-20831), use -1 to skip a duped block of data in file id 1
-- Tokyo Xtreme Racer Drift (SLUS-21236)
-- Tokyo Xtreme Racer DRIFT 2 (SLUS-21394) - extracts all files but there is still some unknown fields in .toc, use -0
-- Import Tuner Challenge, use -2
+## Game compatibility table
 
-## Semi-compatible games
-- Ninkyouden: Toseinin Ichidaiki (SLPM-61144) - similar to txrd2, -0 to extract some files
-- Wangan Midnight Portable (ULJM-05264) - similar to txrd2, -0 to extract some files
-- Fu-un Shinsengumi (SLKA-25139) - extracting .dat containers does not work
+:heavy_check_mark:  - Works fine
 
-## Incompatible games
-- Kaidou Battle 2 - Chain Reaction (SLPM-60228) - weird misalignment after 10th file in toc, exports files still UCL compressed
-- Kaidou Battle 1 Taikenban Demo (SLPM-60195) - very weird toc file contents, does not export anything
+:question: - Not tested
+
+:x: - Doesn't work
+
+:heavy_minus_sign: - Unrelated to the game
+
+| **Name**                                     | **Serial** | **System** | **Extract**        | **Rebuild**        | **Reimport**       | **Comp. flag** |
+|:--------------------------------------------:|:----------:|:----------:|:------------------:|:------------------:|:------------------:|:--------------:|
+| Fu-un Bakumatsu-den                          | SLPM 61096 | PS2        | :question:         | :x:                | :heavy_check_mark: |                |
+| Fu-un Shinsengumi                            | SLKA 25139 | PS2        | :question:         | :question:         | :question:         |                |
+| Import Tuner Challenge                       | SLUS 21394 | X360       | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: | -2             |
+| Kaido Racer                                  | SLES 53191 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
+| Kaido Racer 2                                | SLES 53900 | PS2        | :heavy_check_mark: | :x:                | :heavy_check_mark: | -0             |
+| Kaidou Battle - Nikko, Haruna, Rokko, Hakone | SLPM 65246 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
+| Kaidou Battle - Touge no Densetsu            | SLPM 61121 | PS2        | :heavy_check_mark: | :x:                | :heavy_check_mark: | -0             |
+| Kaidou Battle 1 Taikenban Demo               | SLPM 60195 | PS2        | :heavy_check_mark: | :x:                | :question:         | -3             |
+| Kaidou Battle 2 - Chain Reaction             | SLPM 60228 | PS2        | :x:                | :x:                | :x:                |                |
+| Ninkyouden: Toseinin Ichidaiki               | SLPM 61144 | PS2        | :question:         | :x:                | :question:         | -0             |
+| Racing Battle: C1 Grand Prix                 | SLPM 65897 | PS2        | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
+| Racing Battle: C1 Grand Prix Taikenban       | SLPM 61115 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
+| Shutokou Battle 01                           | SLPM 65308 | PS2        | :heavy_check_mark: | :question:         | :question:         | -1             |
+| Street Supremacy                             | ULUS 10069 | PSP        | :heavy_check_mark: | :question:         | :question:         |                |
+| Tokyo Xtreme Racer 3                         | SLUS 20831 | PS2        | :heavy_check_mark: | :question:         | :question:         | -1             |
+| Tokyo Xtreme Racer Drift                     | SLUS 21236 | PS2        | :heavy_check_mark: | :question:         | :question:         |                |
+| Tokyo Xtreme Racer DRIFT 2                   | SLUS 21394 | PS2        | :heavy_check_mark: | :x:                | :heavy_check_mark: | -0             |
+| Wangan Midnight Portable                     | ULJM 05264 | PSP        | :heavy_check_mark: | :x:                | :question:         | -0             |
+
 
 
 ## Current issues

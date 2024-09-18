@@ -66,6 +66,46 @@ void progress_bar(int percentage)
     fflush(stdout);
 }
 
+void read_toc(FILE* toc_file, ucl_uint* start_offset, ucl_uint* compressed_size, ucl_uint* end_offset, ucl_uint* zero_field, ucl_uint* decompressed_size){
+    switch (gameid)
+        {
+        case 0: /*TXR:D2*/
+            xread(toc_file, start_offset, 4, 0);
+            xread(toc_file, compressed_size, 4, 0);
+            xread(toc_file, decompressed_size, 4, 0);
+            xread(toc_file, zero_field, 4, 0);
+            *end_offset = 1 + *compressed_size / 0x800;
+            break;
+        case -2: /*ITC Big endian*/
+            xread(toc_file, start_offset, 4, 0);
+            xread(toc_file, compressed_size, 4, 0);
+            *compressed_size = swap_uint32(*compressed_size);
+            xread(toc_file, decompressed_size, 4, 0);
+            *decompressed_size = swap_uint32(*decompressed_size);
+            xread(toc_file, zero_field, 4, 0);
+            if (zero_field != 0)
+                end_offset = 0;
+            else
+                *end_offset = swap_uint32(1 + *compressed_size / 0x800);
+            break;
+        case -3: /*KB1T*/
+            xread(toc_file, start_offset, 4, 0);
+            xread(toc_file, compressed_size, 4, 0);
+            xread(toc_file, end_offset, 4, 0);
+            xread(toc_file, zero_field, 4, 0);
+            *decompressed_size = 0;
+            if(*compressed_size == 0) *zero_field = 1;
+            break;
+        default:
+            xread(toc_file, start_offset, 4, 0);
+            xread(toc_file, compressed_size, 4, 0);
+            xread(toc_file, end_offset, 4, 0);
+            xread(toc_file, zero_field, 4, 0);
+            xread(toc_file, decompressed_size, 4, 0);
+            break;
+        }
+}
+
 static BOOL check_for_dat_container(char *file_data, ucl_uint file_size)
 {
     BOOL flag = TRUE;
@@ -543,6 +583,7 @@ int do_decompress(FILE *fi, FILE *fo, unsigned long benchmark_loops, const char 
         memcmp(m, UCL_MAGIC, sizeof(UCL_MAGIC)) != 0)
     {
         printf("%s: header error - this file is not compressed by uclpack\n", progname);
+        printf("check compatibility mode\n");
         r = 1;
         goto err;
     }
@@ -865,36 +906,8 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             break;
         }
         progress_bar((file_index * 100) / file_count);
-        /*experimental switch for different games*/
-        switch (gameid)
-        {
-        case 0: /*TXR:D2*/
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            xread(toc_file, &decompressed_size, 4, 0);
-            xread(toc_file, &zero_field, 4, 0);
-            end_offset = 1 + compressed_size / 0x800;
-            break;
-        case -2: /*ITC Big endian*/
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            compressed_size = swap_uint32(compressed_size);
-            xread(toc_file, &decompressed_size, 4, 0);
-            decompressed_size = swap_uint32(decompressed_size);
-            xread(toc_file, &zero_field, 4, 0);
-            if (zero_field != 0)
-                end_offset = 0;
-            else
-                end_offset = swap_uint32(1 + compressed_size / 0x800);
-            break;
-        default:
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            xread(toc_file, &end_offset, 4, 0);
-            xread(toc_file, &zero_field, 4, 0);
-            xread(toc_file, &decompressed_size, 4, 0);
-            break;
-        }
+        
+        read_toc(toc_file, &start_offset, &compressed_size, &end_offset, &zero_field, &decompressed_size);
 
         actual_length = end_offset * 0x800;
         actual_offset = start_offset * 0x800;
@@ -1106,35 +1119,8 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         {
             break;
         }
-        switch (gameid)
-        {
-        case 0: /*TXR:D2*/
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            xread(toc_file, &decompressed_size, 4, 0);
-            xread(toc_file, &zero_field, 4, 0);
-            end_offset = 1 + compressed_size / 0x800;
-            break;
-        case -2: /*ITC Big endian*/
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            compressed_size = swap_uint32(compressed_size);
-            xread(toc_file, &decompressed_size, 4, 0);
-            decompressed_size = swap_uint32(decompressed_size);
-            xread(toc_file, &zero_field, 4, 0);
-            if (zero_field != 0)
-                end_offset = 0;
-            else
-                end_offset = swap_uint32(1 + compressed_size / 0x800);
-            break;
-        default:
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            xread(toc_file, &end_offset, 4, 0);
-            xread(toc_file, &zero_field, 4, 0);
-            xread(toc_file, &decompressed_size, 4, 0);
-            break;
-        }
+        
+        read_toc(toc_file, &start_offset, &compressed_size, &end_offset, &zero_field, &decompressed_size);
 
         actual_offset = start_offset * 0x800;
         if (gameid == -2)
@@ -1495,35 +1481,8 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
             break;
         }
         files[file_index].importing = FALSE;
-        switch (gameid)
-        {
-        case 0: /*TXR:D2*/
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            xread(toc_file, &decompressed_size, 4, 0);
-            xread(toc_file, &zero_field, 4, 0);
-            end_offset = 1 + compressed_size / 0x800;
-            break;
-        case -2: /*ITC Big endian*/
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            compressed_size = swap_uint32(compressed_size);
-            xread(toc_file, &decompressed_size, 4, 0);
-            decompressed_size = swap_uint32(decompressed_size);
-            xread(toc_file, &zero_field, 4, 0);
-            if (zero_field != 0)
-                end_offset = 0;
-            else
-                end_offset = swap_uint32(1 + compressed_size / 0x800);
-            break;
-        default:
-            xread(toc_file, &start_offset, 4, 0);
-            xread(toc_file, &compressed_size, 4, 0);
-            xread(toc_file, &end_offset, 4, 0);
-            xread(toc_file, &zero_field, 4, 0);
-            xread(toc_file, &decompressed_size, 4, 0);
-            break;
-        }
+        
+        read_toc(toc_file, &start_offset, &compressed_size, &end_offset, &zero_field, &decompressed_size);
 
         actual_offset = start_offset * 0x800;
         if (gameid == -2)
@@ -1977,9 +1936,10 @@ void usage(const char *progname)
     printf("    -cr <FILE.DAT> <IN_DIR>: \n\trebuild files into a .dat container\n\n");
     printf("    -l <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: \n\tlegacy mode for older games\n\n");
     printf("  Compatibility switches (only use if stated):\n");
-    printf("    -0: Tokyo Xtreme Racer DRIFT 2\n");
+    printf("    -0: Tokyo Xtreme Racer DRIFT 2, Kaidou Battle 3\n");
     printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
-    printf("    -2: Import Tuner Challenge\n\n");
+    printf("    -2: Import Tuner Challenge, Shutokou Battle X\n");
+    printf("    -3: Kaidou Battle 1 Taikenban\n\n");
     printf("  Logs:\n");
     printf("    -log: Creates a log file for the operation\n\n");
     printf("\n");
