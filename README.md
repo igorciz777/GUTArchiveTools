@@ -1,5 +1,5 @@
 # GUT Archive Tools
-GUT Archive is an archive type used by the video game company Genki, known mostly for their PS2 racing games.
+GUT (most likely short for Genki Utility) Archive is an archive type used by the video game company Genki, known mostly for their PS2 racing games.
 This archive was used in games made around 2003-2006.
 
 This program is an attempt to reverse engineer the archive to allow file modding.
