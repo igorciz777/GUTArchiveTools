@@ -1415,7 +1415,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
 
 int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *input_dir, BOOL recursive)
 {
-    if (gameid != 1 && gameid != -2)
+    if (gameid != 1 && gameid != -2 && gameid != -1)
     {
         printf("Incompatible game for rebuilding method\n");
         printf("Reimporting files instead\n");

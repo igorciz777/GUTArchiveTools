@@ -72,10 +72,12 @@ Extracting BUILD.DAT recursively
 | Kaidou Battle 2 - Chain Reaction                | SLPM 65514 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Racing Battle: C1 Grand Prix                    | SLPM 65897 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Racing Battle: C1 Grand Prix Taikenban          | SLPM 61115 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
+| Shutokou Battle 01                              | SLPM 65308 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -1       |
 | Shutokou Battle X                               | GE-2001    |     X360   | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -2       |
+| Street Supremacy                                | ULUS 10069 |     PSP    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
+| Tokyo Xtreme Racer 3                            | SLUS 20831 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -1       |
 | Tokyo Xtreme Racer Drift                        | SLUS 21236 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Fu-un Bakumatsu-den Taikenban                   | SLPM 61096 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
-| Street Supremacy                                | ULUS 10069 |     PSP    | :heavy_check_mark: |     :question:     |     :question:     |                |
 | Kaidou Battle 1 Taikenban Demo                  | SLPM 60195 |     PS2    | :heavy_check_mark: |         :x:        |     :question:     |       -3       |
 | Kaido Racer 2                                   | SLES 53900 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
 | Kaidou Battle - Touge no Densetsu               | SLPM 61121 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
@@ -83,17 +85,12 @@ Extracting BUILD.DAT recursively
 | Tokyo Xtreme Racer DRIFT 2                      | SLUS 21394 |     PS2    | :heavy_check_mark: |         :x:        | :heavy_check_mark: |       -0       |
 | Wangan Midnight Portable                        | ULJM 05264 |     PSP    | :heavy_check_mark: |         :x:        |     :question:     |       -0       |
 | Kaidou Battle 2 Taikenban                       | SLPM 60228 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |                |
-| Shutokou Battle 01                              | SLPM 65308 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |       -1       |
 | Shutokou Battle 01 Taikenban                    | SLPM 60206 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |                |
-| Tokyo Xtreme Racer 3                            | SLUS 20831 |     PS2    | :heavy_check_mark: |         :x:        |         :x:        |       -1       |
 | Fu-un Shinsengumi                               | SLPM 65494 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
 | Fu-un Shinsengumi (Korea)                       | SLKA 25139 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
 | Fu-un Shinsengumi Taikenban                     | SLPM 60225 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
 | Ninkyouden: Toseinin Ichidaiki                  | SLPM 66274 |     PS2    |     :question:     |     :question:     |     :question:     |                |
 | Shutokou Battle: Zone of Control                | ULJM 05017 |     PSP    |     :question:     |     :question:     |     :question:     |                |
-
-
-
 
 
 ## Current issues
