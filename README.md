@@ -94,9 +94,8 @@ Extracting BUILD.DAT recursively
 
 
 ## Current issues
-- Very few file types are defined, none for xbox 
-- Problems with many games
-- Lacks proper error handling in many places
+- A lot of undefined file types
+- Problems with some games
 - Possible issues with building on both platforms
 - Code is a spaghetti mess
 
