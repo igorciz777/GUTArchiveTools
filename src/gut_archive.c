@@ -163,107 +163,6 @@ static BOOL check_for_dat_container(char *file_data, ucl_uint file_size)
     return flag;
 }
 
-int extract_legacy(const char *loc_file, const char *data_file, const char *output_dir)
-{
-    FILE *loc, *dat;
-    FILE *log;
-    ucl_uint file_count;
-    ucl_uint file_start_offset;
-    ucl_uint file_size;
-    ucl_uint file_end_offset;
-    int file_index = 0;
-
-    loc = fopen(loc_file, "rb");
-    if (loc == NULL)
-    {
-        perror("Failed to open .loc file");
-        return EXIT_FAILURE;
-    }
-
-    dat = fopen(data_file, "rb");
-    if (dat == NULL)
-    {
-        perror("Failed to open .000 file");
-        fclose(loc);
-        return EXIT_FAILURE;
-    }
-
-    log = fopen("extract.log", "w");
-
-    xread(loc, &file_count, 4, 0);
-
-#ifdef _WIN32
-    _mkdir(output_dir);
-#else
-    mkdir(output_dir, 0700);
-#endif
-
-    printf("Extracting Legacy Archive...\n");
-
-    while (TRUE)
-    {
-        if (file_index >= file_count)
-        {
-            break;
-        }
-
-        xread(loc, &file_start_offset, 4, 0);
-        xread(loc, &file_size, 4, 0);
-        xread(loc, &file_end_offset, 4, 0);
-
-        char log_line[256];
-        sprintf(log_line, "File %d: Start Offset: %08x, End Offset: %08x, Size: %08x\n", file_index, file_start_offset, file_end_offset, file_size);
-        fwrite(log_line, 1, strlen(log_line), log);
-
-        char filename[256];
-        char file_extension[6];
-        char file_header[32];
-
-        file_header[0] = 0;
-        file_extension[0] = 0;
-
-        char *file_data = (char *)malloc(file_size);
-        if (file_data == NULL)
-        {
-            perror("Failed to allocate memory");
-            fclose(loc);
-            fclose(dat);
-            return EXIT_FAILURE;
-        }
-
-        fseek(dat, file_start_offset, SEEK_SET);
-        xread(dat, file_data, file_size, 0);
-
-        memcpy(file_header, file_data, 32);
-        strncpy(file_extension, find_file_extension(file_header), 5);
-
-        sprintf(filename, "%s/%08d.%s", output_dir, file_index, file_extension);
-
-        FILE *output_file = fopen(filename, "wb");
-        if (output_file == NULL)
-        {
-            perror("Failed to create output file");
-            fclose(loc);
-            fclose(dat);
-            free(file_data);
-            return EXIT_FAILURE;
-        }
-
-        xwrite(output_file, file_data, file_size);
-        fclose(output_file);
-
-        free(file_data);
-        file_index++;
-    }
-    printf("Files extracted successfully\n");
-    fclose(loc);
-    fclose(dat);
-    fclose(log);
-    if (!logs)
-        remove("extract.log");
-    return EXIT_SUCCESS;
-}
-
 int build_dat_container(const char *dat_filename, const char *input_dir)
 {
     FILE *dat_file;
@@ -1924,17 +1823,143 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     return EXIT_SUCCESS;
 }
 
+int add_file_to_archive(const char *toc_filename, const char *dat_filename, const char *input_file){
+    FILE *toc_file, *dat_file, *new_file;
+    FILE *log;
+
+    ucl_uint file_count;
+    ucl_uint start_offset, compressed_size, end_offset, zero_field, decompressed_size;
+    char log_line[256];
+
+    toc_file = fopen(toc_filename, "r+b");
+    if (toc_file == NULL)
+    {
+        perror("Failed to open .toc file");
+        return EXIT_FAILURE;
+    }
+
+    dat_file = fopen(dat_filename, "r+b");
+    if (dat_file == NULL)
+    {
+        perror("Failed to open .dat file");
+        fclose(toc_file);
+        return EXIT_FAILURE;
+    }
+
+    new_file = fopen(input_file, "r+b");
+    if (new_file == NULL)
+    {
+        perror("Failed to open input file");
+        fclose(toc_file);
+        fclose(dat_file);
+        return EXIT_FAILURE;
+    }
+
+    log = fopen("add.log", "w");
+
+    printf("Reading file info from TOC...\n");
+
+    xread(toc_file, &file_count, 4, 0);
+    if (gameid == -2)
+        file_count = swap_uint32(file_count);
+
+    int toc_info_size = (gameid == 0 || gameid== -2 || gameid == -3) ? 16 : 20;
+    
+    //fseek last file
+    fseek(toc_file, 16, SEEK_SET);
+    fseek(toc_file, (file_count - 1) * toc_info_size, SEEK_CUR);
+
+    build_file last_file;
+    read_toc(toc_file, &last_file.start_offset, &last_file.compressed_size, &last_file.end_offset, &last_file.zero_field, &last_file.decompressed_size);
+
+    sprintf(log_line, "Last file: TOC offset %08x, DAT offset %08x, compressed size %d, decompressed size %d, end offset %d\n", last_file.start_offset, last_file.start_offset * 0x800, last_file.compressed_size, last_file.decompressed_size, last_file.end_offset);
+    fwrite(log_line, 1, strlen(log_line), log);
+
+    start_offset = last_file.start_offset + last_file.end_offset;
+    //no ucl for now
+    fseek(new_file, 0, SEEK_END);
+    compressed_size = ftell(new_file);
+    fseek(new_file, 0, SEEK_SET);
+    decompressed_size = 0;
+    end_offset = 1 + compressed_size / 0x800;
+    zero_field = 0;
+
+    sprintf(log_line, "New file: TOC offset %08x, DAT offset %08x, compressed size %d, decompressed size %d, end offset %d\n", start_offset, start_offset * 0x800, compressed_size, decompressed_size, end_offset);
+    fwrite(log_line, 1, strlen(log_line), log);
+
+    fseek(toc_file, 0, SEEK_SET);
+    if(gameid == -2)
+        xwrite32(toc_file, file_count + 1);
+    else
+        xwrite32(toc_file, swap_uint32(file_count + 1));
+
+    fseek(toc_file, 0, SEEK_END);
+    switch (gameid)
+    {
+    case 0: /*TXR:D2*/
+        xwrite32(toc_file, swap_uint32(start_offset));
+        xwrite32(toc_file, swap_uint32(compressed_size));
+        xwrite32(toc_file, swap_uint32(decompressed_size));
+        xwrite32(toc_file, swap_uint32(end_offset));
+        xwrite32(toc_file, swap_uint32(zero_field));
+        break;
+    case -2: /*ITC Big endian*/
+        xwrite32(toc_file, start_offset);
+        xwrite32(toc_file, compressed_size);
+        xwrite32(toc_file, decompressed_size);
+        xwrite32(toc_file, end_offset);
+        xwrite32(toc_file, zero_field);
+        break;
+    default:
+        xwrite32(toc_file, swap_uint32(start_offset));
+        xwrite32(toc_file, swap_uint32(compressed_size));
+        xwrite32(toc_file, swap_uint32(end_offset));
+        xwrite32(toc_file, swap_uint32(zero_field));
+        xwrite32(toc_file, swap_uint32(decompressed_size));
+        break;
+    }
+    //fseek(dat_file, start_offset * 0x800, SEEK_SET);
+    fseek(dat_file, 0, SEEK_END);
+
+    sprintf(log_line, "Adding file to DAT at offset %08x\n", start_offset * 0x800);
+    fwrite(log_line, 1, strlen(log_line), log);
+
+    fseek(new_file, 0, SEEK_SET);
+    char *file_data = (char *)calloc(1,end_offset * 0x800);
+    if (file_data == NULL)
+    {
+        perror("Failed to allocate memory");
+        fclose(toc_file);
+        fclose(dat_file);
+        fclose(new_file);
+        return EXIT_FAILURE;
+    }
+    xread(new_file, file_data, compressed_size, 0);
+    xwrite(dat_file, file_data, end_offset * 0x800);
+    free(file_data);
+
+    printf("File added to GUT Archive successfully\n");
+
+    fclose(toc_file);
+    fclose(dat_file);
+    fclose(new_file);
+    fclose(log);
+    if (!logs)
+        remove("add.log");
+    return EXIT_SUCCESS;
+}
+
 void usage(const char *progname)
 {
     printf("\nUsage: %s [mode] [comp] [log]\n\n", progname);
     printf("  Modes:\n");
-    printf("    -r <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
-    printf("    -d <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
+    printf("    -r  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
+    printf("    -d  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
     printf("    -dr <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive recursively (any .dat files inside) to <OUT_DIR>\n\n");
     printf("    -rr <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> recursively (repacks .dat files inside) into <BUILD.DAT>\n\n");
-    printf("    -cd <FILE.DAT> <OUT_DIR>: \n\textract files from a .dat container\n\n");
-    printf("    -cr <FILE.DAT> <IN_DIR>: \n\trebuild files into a .dat container\n\n");
-    printf("    -l <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: \n\tlegacy mode for older games\n\n");
+    printf("    -a  <BUILD.TOC> <BUILD.DAT> <FILE>: \n\tadd a new <FILE> to the bottom of the <BUILD.DAT> archive [experimental]\n\n");
+    printf("    -cd <FILE.DAT>  <OUT_DIR>: \n\textract files from a .dat container\n\n");
+    printf("    -cr <FILE.DAT>  <IN_DIR>: \n\trebuild files into a .dat container\n\n");
     printf("  Compatibility switches (only use if stated):\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2, Kaidou Battle 3\n");
     printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
@@ -2143,7 +2168,7 @@ int __acc_cdecl_main main(int argc, char *argv[])
         }
         result = rebuild_GUT_Archive(toc_file, dat_file, directory, TRUE);
     }
-    else if (strcmp(argv[1], "-l") == 0)
+    else if (strcmp(argv[1], "-a") == 0)
     {
         if (argc < 5)
         {
@@ -2167,8 +2192,8 @@ int __acc_cdecl_main main(int argc, char *argv[])
         }
         strncpy(toc_file, argv[2], 255);
         strncpy(dat_file, argv[3], 255);
-        strncpy(output_dir, argv[4], 255);
-        result = extract_legacy(toc_file, dat_file, output_dir);
+        strncpy(directory, argv[4], 255);
+        result = add_file_to_archive(toc_file, dat_file, directory);
     }
     else
     {
