@@ -83,10 +83,11 @@ void read_toc(FILE* toc_file, ucl_uint* start_offset, ucl_uint* compressed_size,
             xread(toc_file, decompressed_size, 4, 0);
             *decompressed_size = swap_uint32(*decompressed_size);
             xread(toc_file, zero_field, 4, 0);
-            if (zero_field != 0)
-                end_offset = 0;
-            else
-                *end_offset = swap_uint32(1 + *compressed_size / 0x800);
+            if (*zero_field != 0){
+                *end_offset = 0;
+            }else{
+                *end_offset = swap_uint32(1 + (*compressed_size / 0x800));
+            }
             break;
         case -3: /*KB1T*/
             xread(toc_file, start_offset, 4, 0);
@@ -1332,6 +1333,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
     ucl_uint new_toc_offset;
     ucl_uint additional_offset = 0, new_additional_offset;
     ucl_uint32 new_len, old_len, new_decompressed_size;
+    ucl_uint32 padded_length;
     int file_index = 0;
     int r = -1;
 
@@ -1615,23 +1617,24 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 #endif
 
             new_additional_offset = additional_offset;
+            padded_length = 1 + (new_decompressed_size / 0x800);
 
             if (gameid == -2)
             {
-                while (new_toc_offset * 0x800 + new_decompressed_size > (swap_uint32(files[file_index].start_offset) + new_additional_offset) * 0x800)
+                while ((new_toc_offset + padded_length) * 0x800 > (swap_uint32(files[file_index].start_offset) + swap_uint32(files[file_index].end_offset) + new_additional_offset) * 0x800)
                 {
                     new_additional_offset += 1;
-                    files[file_index].end_offset += 1;
                 }
             }
             else
             {
-                while (new_toc_offset * 0x800 + new_decompressed_size > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800)
+                while ((new_toc_offset + padded_length) * 0x800 > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800)
                 {
                     new_additional_offset += 1;
-                    files[file_index].end_offset += 1;
                 }
             }
+
+            files[file_index].end_offset = padded_length;
 
             xread(input_file, uncompressed_file_data, new_decompressed_size, 0);
             xwrite(new_dat_file, uncompressed_file_data, new_decompressed_size);
@@ -1718,26 +1721,26 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
 #endif
 
         new_additional_offset = additional_offset;
+        padded_length = 1 + (new_len / 0x800);
 
         if (gameid == -2)
         {
-            while (new_toc_offset * 0x800 + new_len > (swap_uint32(files[file_index].start_offset) + new_additional_offset) * 0x800)
+            while ((new_toc_offset + padded_length) * 0x800 > (swap_uint32(files[file_index].start_offset) + swap_uint32(files[file_index].end_offset) + new_additional_offset) * 0x800)
             {
                 new_additional_offset += 1;
-                files[file_index].end_offset += 1;
             }
         }
         else
         {
-            while (new_toc_offset * 0x800 + new_len > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800)
+            while ((new_toc_offset + padded_length) * 0x800 > (files[file_index].start_offset + files[file_index].end_offset + new_additional_offset) * 0x800)
             {
                 new_additional_offset += 1;
-                files[file_index].end_offset += 1;
             }
         }
         old_len = files[file_index].compressed_size;
         files[file_index].compressed_size = new_len;
         files[file_index].decompressed_size = new_decompressed_size;
+        files[file_index].end_offset = padded_length;
 
         char *compressed_file_data = (char *)malloc(new_len);
         if (compressed_file_data == NULL)
