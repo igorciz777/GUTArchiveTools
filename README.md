@@ -9,13 +9,13 @@ This program is an attempt to reverse engineer the archive to allow file modding
 gut_archive [mode] -0,... [log]
 ```
 ### Modes
-- **-r** <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> into <BUILD.DAT>
-- **-d** <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive to <OUT_DIR>
+- **-r**  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> into <BUILD.DAT>
+- **-d**  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive to <OUT_DIR>
 - **-dr** <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive recursively (any .dat files inside) to <OUT_DIR>
 - **-rr** <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> recursively, <DAT_OUT> needs to have same name as the .dat file without extension
+- **-a**  <BUILD.TOC> <BUILD.DAT> <FILE>: \n\tadd a new <FILE> to the bottom of the <BUILD.DAT> archive (experimental, doesn't really do anything useful without modyfing game code)
 - **-cd** <FILE.DAT> <OUT_DIR>: Extract files from a .dat container (different from BUILD.DAT!!!)
 - **-cr** <FILE.DAT> <IN_DIR>: Rebuild files into a .dat container (different from BUILD.DAT!!!)
-- **-l** <CDDATA.LOC> <CDDATA.000> <OUT_DIR>: Legacy mode for older games
 
 ### Game switches
 - **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu
