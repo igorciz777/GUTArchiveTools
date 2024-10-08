@@ -831,7 +831,7 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         sprintf(log_line, "File %d: TOC Offset: %08x, Mul. Offset: %08x, Compressed Size: %d, Length: %08x, Zero Check: %d, Decompressed Size: %d\n", file_index, start_offset, actual_offset, compressed_size, actual_length, zero_field, decompressed_size);
         fwrite(log_line, 1, strlen(log_line), log);
 
-        if (zero_field == 1 || (gameid == -1 && file_index == 1))
+        if (zero_field == 1)
         {
             file_index++;
             continue;
@@ -1965,7 +1965,6 @@ void usage(const char *progname)
     printf("    -cr <FILE.DAT>  <IN_DIR>: \n\trebuild files into a .dat container\n\n");
     printf("  Compatibility switches (only use if stated):\n");
     printf("    -0: Tokyo Xtreme Racer DRIFT 2, Kaidou Battle 3\n");
-    printf("    -1: Tokyo Xtreme Racer 3, Shutokou Battle 01\n");
     printf("    -2: Import Tuner Challenge, Shutokou Battle X\n");
     printf("    -3: Kaidou Battle 1 Taikenban\n\n");
     printf("  Logs:\n");

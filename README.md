@@ -19,7 +19,6 @@ gut_archive [mode] -0,... [log]
 
 ### Game switches
 - **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu
-- **-1**: Tokyo Xtreme Racer 3, Shutokou Battle 01
 - **-2**: Import Tuner Challenge, Shutokou Battle X
 - **-3**: Kaidou Battle 1 Taikenban
 
@@ -72,10 +71,10 @@ Extracting BUILD.DAT recursively
 | Kaidou Battle 2 - Chain Reaction                | SLPM 65514 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Racing Battle: C1 Grand Prix                    | SLPM 65897 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Racing Battle: C1 Grand Prix Taikenban          | SLPM 61115 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
-| Shutokou Battle 01                              | SLPM 65308 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -1       |
+| Shutokou Battle 01                              | SLPM 65308 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Shutokou Battle X                               | GE-2001    |     X360   | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -2       |
 | Street Supremacy                                | ULUS 10069 |     PSP    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
-| Tokyo Xtreme Racer 3                            | SLUS 20831 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |       -1       |
+| Tokyo Xtreme Racer 3                            | SLUS 20831 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Tokyo Xtreme Racer Drift                        | SLUS 21236 |     PS2    | :heavy_check_mark: | :heavy_check_mark: | :heavy_minus_sign: |                |
 | Fu-un Bakumatsu-den Taikenban                   | SLPM 61096 |     PS2    | :heavy_check_mark: |     :question:     |     :question:     |                |
 | Kaidou Battle 1 Taikenban Demo                  | SLPM 60195 |     PS2    | :heavy_check_mark: |         :x:        |     :question:     |       -3       |
