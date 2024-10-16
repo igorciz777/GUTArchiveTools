@@ -74,7 +74,7 @@ void read_toc(FILE* toc_file, ucl_uint* start_offset, ucl_uint* compressed_size,
             xread(toc_file, compressed_size, 4, 0);
             xread(toc_file, decompressed_size, 4, 0);
             xread(toc_file, zero_field, 4, 0);
-            *end_offset = 1 + *compressed_size / 0x800;
+            *end_offset = 1 + (*compressed_size / 0x800);
             break;
         case -2: /*ITC Big endian*/
             xread(toc_file, start_offset, 4, 0);
@@ -817,21 +817,14 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
             actual_length = swap_uint32(end_offset) * 0x800;
         }
 
-        if (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2))
-        {
-            zero_field = 1;
-        }
-
-        if (gameid == -2 && file_index == 0)
-        { /*the file 0 is just cut-off repeat of file 1 in ITC*/
-            zero_field = 1;
-        }
-
         char log_line[256];
         sprintf(log_line, "File %d: TOC Offset: %08x, Mul. Offset: %08x, Compressed Size: %d, Length: %08x, Zero Check: %d, Decompressed Size: %d\n", file_index, start_offset, actual_offset, compressed_size, actual_length, zero_field, decompressed_size);
         fwrite(log_line, 1, strlen(log_line), log);
 
-        if (zero_field == 1)
+        if (
+            (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2)) ||
+            (zero_field == 1 && gameid != 0)
+            )
         {
             file_index++;
             continue;
@@ -1028,11 +1021,15 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
             actual_offset = swap_uint32(start_offset) * 0x800;
         }
 
-        if (zero_field == 1)
+        if (
+            (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2)) ||
+            (zero_field == 1 && gameid != 0)
+            )
         {
             file_index++;
             continue;
         }
+
         if (decompressed_size == 0)
         {
             files[file_index].compressed = FALSE;
@@ -1111,12 +1108,6 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
         if (gameid == -2)
         {
             actual_offset = swap_uint32(files[file_index].start_offset) * 0x800;
-        }
-
-        if (files[file_index].zero_field == 1)
-        {
-            printf("Zero field != 0\n");
-            continue;
         }
 
         char infilename[1024];
@@ -1315,7 +1306,7 @@ int reimport_to_GUT_Archive(const char *toc_filename, const char *dat_filename, 
 
 int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, const char *input_dir, BOOL recursive)
 {
-    if (gameid != 1 && gameid != -2 && gameid != -1)
+    if (gameid == -3)
     {
         printf("Incompatible game for rebuilding method\n");
         printf("Reimporting files instead\n");
@@ -1384,6 +1375,7 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         files[file_index].importing = FALSE;
         
         read_toc(toc_file, &start_offset, &compressed_size, &end_offset, &zero_field, &decompressed_size);
+        if(gameid == 0) zero_field = 0;
 
         actual_offset = start_offset * 0x800;
         if (gameid == -2)
@@ -1573,12 +1565,6 @@ int rebuild_GUT_Archive(const char *toc_filename, const char *dat_filename, cons
         {
             actual_offset = (swap_uint32(files[file_index].start_offset) + additional_offset) * 0x800;
             new_toc_offset = swap_uint32(files[file_index].start_offset) + additional_offset;
-        }
-
-        if (files[file_index].zero_field == 1)
-        {
-            printf("Zero field != 0\n");
-            continue;
         }
 
         FILE *input_file = fopen(files[file_index].infilename, "r+b");
@@ -1884,7 +1870,7 @@ int add_file_to_archive(const char *toc_filename, const char *dat_filename, cons
     compressed_size = ftell(new_file);
     fseek(new_file, 0, SEEK_SET);
     decompressed_size = 0;
-    end_offset = 1 + compressed_size / 0x800;
+    end_offset = 1 + (compressed_size / 0x800);
     zero_field = 0;
 
     sprintf(log_line, "New file: TOC offset %08x, DAT offset %08x, compressed size %d, decompressed size %d, end offset %d\n", start_offset, start_offset * 0x800, compressed_size, decompressed_size, end_offset);
@@ -1964,7 +1950,7 @@ void usage(const char *progname)
     printf("    -cd <FILE.DAT>  <OUT_DIR>: \n\textract files from a .dat container\n\n");
     printf("    -cr <FILE.DAT>  <IN_DIR>: \n\trebuild files into a .dat container\n\n");
     printf("  Compatibility switches (only use if stated):\n");
-    printf("    -0: Tokyo Xtreme Racer DRIFT 2, Kaidou Battle 3\n");
+    printf("    -0: TXR:D2, KR2, KB3, Wangan Midnight Portable, Ninkyouden\n");
     printf("    -2: Import Tuner Challenge, Shutokou Battle X\n");
     printf("    -3: Kaidou Battle 1 Taikenban\n\n");
     printf("  Logs:\n");
