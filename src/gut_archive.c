@@ -822,8 +822,9 @@ int decompress_GUT_Archive(const char *toc_filename, const char *dat_filename, c
         fwrite(log_line, 1, strlen(log_line), log);
 
         if (
-            (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2)) ||
-            (zero_field == 1 && gameid != 0)
+            (actual_offset == 0 && file_index > 1 && (gameid == 0 || gameid == -2 || gameid == -4)) ||
+            (zero_field == 1 && gameid != 0) || 
+            (file_index == 0 && gameid == -2) //file 0 is a cut off copy of file 1 in ITC/SBX
             )
         {
             file_index++;
@@ -1952,7 +1953,8 @@ void usage(const char *progname)
     printf("  Compatibility switches (only use if stated):\n");
     printf("    -0: TXR:D2, KR2, KB3, Wangan Midnight Portable, Ninkyouden\n");
     printf("    -2: Import Tuner Challenge, Shutokou Battle X\n");
-    printf("    -3: Kaidou Battle 1 Taikenban\n\n");
+    printf("    -3: Kaidou Battle 1 Taikenban\n");
+    printf("    -4: Kaidou Battle 2 PurePure 2 Volume 10 Demo\n\n");
     printf("  Logs:\n");
     printf("    -log: Creates a log file for the operation\n\n");
     printf("\n");
