@@ -40,6 +40,9 @@ static const unsigned char TGA[18] = {0x54, 0x52 ,0x55 ,0x45 ,0x56 ,0x49 ,0x53 ,
 /*not sure about endian of this one, found in c1gp demo*/
 static const unsigned char BSPR[4] = {0x52, 0x50, 0x53, 0x42};
 
+/*found in txr3*/
+static const unsigned char CLT2[4] = {0x43, 0x4C, 0x54, 0x32};
+
 
 typedef struct
 {
@@ -79,6 +82,7 @@ static const file_extension file_extensions[] = {
     {"gif", GIF, 3},
     {"tga", TGA, 18},
     {"bspr", BSPR, 4},
+    {"clt", CLT2, 4},
     {"xvi", XVI, 8}
 };
 
