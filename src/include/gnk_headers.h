@@ -88,7 +88,7 @@ static const file_extension file_extensions[] = {
 
 static const char *find_file_extension(const char *file_header)
 {
-    for (int i = 0; i < sizeof(file_extensions) / sizeof(file_extension); i++)
+    for (long long unsigned int i = 0; i < sizeof(file_extensions) / sizeof(file_extension); i++)
     {
         if (memcmp(file_header, file_extensions[i].magic, file_extensions[i].magic_size) == 0)
         {

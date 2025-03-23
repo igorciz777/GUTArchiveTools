@@ -36,7 +36,7 @@ ucl_uint xwrite(FILE *f, const ucl_voidp buf, ucl_uint len)
 
     if (f != NULL)
     {
-        l = (ucl_uint)ucl_fwrite(f, buf, len);
+        l = (ucl_uint)fwrite(buf, 1, len, f);
         if (l != len)
         {
             fprintf(stderr, "\nwrite error [%ld %ld]  (disk full ?)\n",
@@ -50,7 +50,7 @@ ucl_uint xwrite(FILE *f, const ucl_voidp buf, ucl_uint len)
 ucl_uint xread(FILE *f, ucl_voidp buf, ucl_uint len, ucl_bool allow_eof)
 {
     ucl_uint l;
-    l = (ucl_uint)ucl_fread(f, buf, len);
+    l = (ucl_uint)fread(buf, 1, len, f);
     if (l > len)
     {
         fprintf(stderr, "\nsomething's wrong with your C library !!!\n");
