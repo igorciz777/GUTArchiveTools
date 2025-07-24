@@ -83,7 +83,7 @@ static const file_extension file_extensions[] = {
     {"tga", TGA, 18},
     {"bspr", BSPR, 4},
     {"clt", CLT2, 4},
-    {"xvi", XVI, 8}
+    {"xmdl", XVI, 8}
 };
 
 static const char *find_file_extension(const char *file_header)
