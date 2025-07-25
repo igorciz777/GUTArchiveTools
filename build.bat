@@ -1,1 +1,1 @@
-gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
+gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
