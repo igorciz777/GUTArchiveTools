@@ -194,7 +194,7 @@ int do_compress(FILE *fi, FILE *fo, int method, int level, ucl_uint block_size)
     ucl_bytep out = NULL;
     ucl_uint in_len;
     ucl_uint out_len;
-    ucl_uint32 flags = 1; //opt_fast == true
+    ucl_uint32 flags = 0; //opt_fast == true
     ucl_uint32 checksum;
     ucl_uint overhead = 0;
 
