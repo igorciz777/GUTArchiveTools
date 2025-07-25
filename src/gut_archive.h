@@ -712,7 +712,16 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
 
                 if (additional_offset > 0)
                 {
-                    files[file_index].toc_entry.start_offset += additional_offset;
+                    if(_GAME_ID == ITC_T)
+                    {
+                        uint32_t start_offset = swap_uint32(files[file_index].toc_entry.start_offset);
+                        start_offset += additional_offset;
+                        files[file_index].toc_entry.start_offset = swap_uint32(start_offset);
+                    }
+                    else
+                    {
+                        files[file_index].toc_entry.start_offset += additional_offset;
+                    }
                 }
             }
             continue;
@@ -783,7 +792,16 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             free(uncompressed_file_data);
             fclose(input_file);
 
-            files[file_index].toc_entry.start_offset += additional_offset;
+            if(_GAME_ID == ITC_T)
+            {
+                uint32_t start_offset = swap_uint32(files[file_index].toc_entry.start_offset);
+                start_offset += additional_offset;
+                files[file_index].toc_entry.start_offset = swap_uint32(start_offset);
+            }
+            else
+            {
+                files[file_index].toc_entry.start_offset += additional_offset;
+            }
             files[file_index].toc_entry.compressed_size = new_decompressed_size;
             files[file_index].toc_entry.end_offset = padded_length;
 
@@ -860,7 +878,16 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             fclose(input_file);
             fclose(temp_compressed_file);
 
-            files[file_index].toc_entry.start_offset += additional_offset;
+            if(_GAME_ID == ITC_T)
+            {
+                uint32_t start_offset = swap_uint32(files[file_index].toc_entry.start_offset);
+                start_offset += additional_offset;
+                files[file_index].toc_entry.start_offset = swap_uint32(start_offset);
+            }
+            else
+            {
+                files[file_index].toc_entry.start_offset += additional_offset;
+            }
             files[file_index].toc_entry.compressed_size = new_compressed_size;
             files[file_index].toc_entry.decompressed_size = new_decompressed_size;
             files[file_index].toc_entry.end_offset = padded_length;
