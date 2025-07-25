@@ -384,8 +384,8 @@ int rebuild_datafile(FILE *dat_file, const char *input_dir)
 int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entry_t *entry)
 {
     bool compressed = false;
-    uint32_t actual_length;
-    uint32_t actual_offset;
+    uint64_t actual_length;
+    uint64_t actual_offset;
 
     actual_length = entry->end_offset * 0x800;
     actual_offset = entry->start_offset * 0x800;
@@ -531,13 +531,13 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
     DIR *dir;
     struct dirent *entry;
 
-    ucl_uint file_count;
-    ucl_uint actual_offset;
-    ucl_uint new_toc_offset;
-    ucl_uint additional_offset = 0, new_additional_offset;
-    ucl_uint32 new_compressed_size, new_decompressed_size;
-    ucl_uint32 padded_length;
-    ucl_uint file_index = 0;
+    uint32_t file_count;
+    uint64_t actual_offset;
+    uint32_t new_toc_offset;
+    uint32_t additional_offset = 0, new_additional_offset;
+    uint32_t new_compressed_size, new_decompressed_size;
+    uint32_t padded_length;
+    uint32_t file_index = 0;
     int result = -1;
 
     toc_entry_t *toc_entries;
@@ -686,7 +686,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
                     fseek(new_dat_file, (files[file_index].toc_entry.start_offset + additional_offset) * 0x800, SEEK_SET);
                 }
 
-                uint32_t actual_length;
+                uint64_t actual_length;
                 if (_GAME_ID == ITC_T)
                 {
                     actual_length = swap_uint32(files[file_index].toc_entry.end_offset) * 0x800;
