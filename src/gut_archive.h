@@ -11,6 +11,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
 #include "ucl_func.h"
 #include "gut_file.h"
@@ -76,6 +77,72 @@ inline void progress_bar(int percentage)
 }
 
 /**
+ * Log utility
+ */
+static FILE* log_file = NULL;
+enum LOG_TYPE
+{
+    LOG_VERBOSE,
+    LOG_INFO,
+    LOG_WARNING,
+    LOG_ERROR
+};
+
+void log_printf(enum LOG_TYPE type, const char* format, ...)
+{
+    if (!_LOGS) return;
+
+    if (log_file == NULL)
+    {
+        log_file = fopen("gut_archive.log", "a");
+        if (log_file == NULL)
+        {
+            perror("Failed to open log file");
+            return;
+        }
+    }
+
+    const char* type_str;
+    switch (type)
+    {
+        case LOG_VERBOSE:
+            type_str = "VERBOSE";
+            break;
+        case LOG_INFO:
+            type_str = "INFO";
+            break;
+        case LOG_WARNING:
+            type_str = "WARNING";
+            break;
+        case LOG_ERROR:
+            type_str = "ERROR";
+            break;
+        default:
+            type_str = "UNKNOWN";
+            break;
+    }
+
+    fprintf(log_file, "[%s] ", type_str);
+
+    va_list args;
+    va_start(args, format);
+    vfprintf(log_file, format, args);
+    va_end(args);
+
+    fprintf(log_file, "\n");
+    fflush(log_file);
+}
+
+void close_log()
+{
+    if (log_file != NULL)
+    {
+        fclose(log_file);
+        log_file = NULL;
+    }
+}
+
+/**
  * Set _GAME_ID flag from command line argument
  */
 void set_game_id(char *arg)
@@ -107,17 +174,23 @@ bool datafile_check(FILE* file)
     uint32_t file_count;
     uint32_t offset;
 
+    log_printf(LOG_VERBOSE, "%s:%s","datafile_check","Checking if file is a valid .dat datafile");
+
     fseek(file, 0, SEEK_END);
     file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
+    log_printf(LOG_VERBOSE, "%s:%s:%u","datafile_check","File size", file_size);
+
     if (file_size < 0x8)
     {
+        log_printf(LOG_VERBOSE, "%s:%s","datafile_check","File size is too small to be a valid .dat file");
         return false; // Not enough data for a valid .dat file
     }
     xread(file, &file_count, 4, 0);
     if(file_count == 0 || file_count > ((file_size / 0x4) + 0x4))
     {
+        log_printf(LOG_VERBOSE, "%s:%s:%u","datafile_check","Invalid file count", file_count);
         return false; // Invalid file count or too large for a .dat file
     }
     for(uint32_t i = 0; i < file_count; i++)
@@ -125,14 +198,17 @@ bool datafile_check(FILE* file)
         xread(file, &offset, 4, 0);
         if (offset == 0 || offset >= file_size || offset== 0xFFFFFFFF)
         {
+            log_printf(LOG_VERBOSE, "%s:%s:%u","datafile_check","Invalid offset for file", i, offset);
             return false; // Invalid offset
         }
         if (file_count == 0x0F && offset == 0x29 && i < 1)
         {
+            log_printf(LOG_VERBOSE, "%s:%s:%u","datafile_check","Invalid offset for file", i, offset);
             return false; // Bakumatsuden edge case
         }
     }
     fseek(file, 0, SEEK_SET);
+    log_printf(LOG_VERBOSE, "%s:%s","datafile_check","File is a valid .dat datafile");
     return true; // Valid .dat file
 }
 
@@ -171,9 +247,13 @@ uint32_t get_TOC_entries(FILE *toc_file, toc_entry_t **entries)
 {
     uint32_t file_count;
 
+    log_printf(LOG_VERBOSE, "%s:%s","get_TOC_entries","Reading TOC entries");
+
     xread(toc_file, &file_count, 4, 0);
 
     if(_GAME_ID == ITC_T) file_count = swap_uint32(file_count);
+
+    log_printf(LOG_INFO, "%s:%s %u","get_TOC_entries","File count:", file_count);
 
     fseek(toc_file, 0x10, SEEK_SET);
 
@@ -181,6 +261,7 @@ uint32_t get_TOC_entries(FILE *toc_file, toc_entry_t **entries)
     if (*entries == NULL)
     {
         perror("Failed to allocate memory for TOC entries");
+        log_printf(LOG_ERROR, "%s:%s","get_TOC_entries","Failed to allocate memory for TOC entries");
         return 0;
     }
 
@@ -225,6 +306,12 @@ uint32_t get_TOC_entries(FILE *toc_file, toc_entry_t **entries)
                 xread(toc_file, &entry->decompressed_size, 4, 0);
                 break;
         }
+        log_printf(LOG_INFO, "%s:%s %u","get_TOC_entries","TOC entry", i);
+        log_printf(LOG_INFO, "  Start Offset: %08x", entry->start_offset);
+        log_printf(LOG_INFO, "  Compressed Size: %08x", entry->compressed_size);
+        log_printf(LOG_INFO, "  Decompressed Size: %08x", entry->decompressed_size);
+        log_printf(LOG_INFO, "  End Offset: %08x", entry->end_offset);
+        log_printf(LOG_INFO, "  Zero Field: %08x", entry->zero_field);
     }
     return file_count;
 }
@@ -234,6 +321,7 @@ uint32_t get_TOC_entries(FILE *toc_file, toc_entry_t **entries)
  */
 void write_TOC_entries(FILE *toc_file, rebuild_entry_t *entries, uint32_t file_count)
 {
+    log_printf(LOG_VERBOSE, "%s:%s","write_TOC_entries","Writing TOC entries");
     fseek(toc_file, 0x10, SEEK_SET);
     for (uint32_t i = 0; i < file_count; i++)
     {
@@ -266,6 +354,7 @@ void write_TOC_entries(FILE *toc_file, rebuild_entry_t *entries, uint32_t file_c
                 xwrite(toc_file, (void*)&entry->decompressed_size, 0x4);
                 break;
         }
+        log_printf(LOG_INFO, "%s:%s %u","write_TOC_entries","Wrote TOC entry", i);
     }
 }
 
@@ -280,20 +369,25 @@ int extract_datafile(FILE *datafile, const char *output_dir)
     uint32_t file_count;
     uint32_t *offsets;
 
+    log_printf(LOG_VERBOSE, "%s:%s","extract_datafile","Starting extraction");
+
     if(!datafile_check(datafile))
     {
         fprintf(stderr, "Error: Not a valid .dat file\n");
+        log_printf(LOG_ERROR, "%s:%s","extract_datafile","Not a valid .dat file");
         return EXIT_FAILURE;
     }
     fseek(datafile, 0, SEEK_END);
     file_size = ftell(datafile);
     fseek(datafile, 0, SEEK_SET);
     xread(datafile, &file_count, 4, 0);
+    log_printf(LOG_INFO, "%s:%s %u","extract_datafile","File count", file_count);
 
     offsets = (uint32_t *)malloc((file_count+1) * sizeof(uint32_t));
     if (offsets == NULL)
     {
         perror("Failed to allocate memory for offsets");
+        log_printf(LOG_ERROR, "%s:%s","extract_datafile","Failed to allocate memory for offsets");
         return EXIT_FAILURE;
     }
     for (uint32_t i = 0; i < file_count; i++)
@@ -303,6 +397,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         {
             fprintf(stderr, "Error: Invalid offset in .dat file\n");
             free(offsets);
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Invalid offset in .dat file for file", i);
             return EXIT_FAILURE;
         }
     }
@@ -323,6 +418,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         {
             perror("Failed to create output file");
             free(offsets);
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to create output file for file", file_idx);
             return EXIT_FAILURE;
         }
 
@@ -335,6 +431,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
             perror("Failed to allocate memory for file data");
             fclose(out);
             free(offsets);
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to allocate memory for file data for file", file_idx);
             return EXIT_FAILURE;
         }
         xread(datafile, file_data, actual_length, 0);
@@ -347,6 +444,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         {
             perror("Failed to reopen output file");
             free(offsets);
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to reopen output file for file", file_idx);
             return EXIT_FAILURE;
         }
         const char *ext = get_file_extension(out);
@@ -357,12 +455,14 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         if (rename(filename, new_filename) != 0)
         {
             perror("Failed to rename output file");
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to rename output file for file", file_idx);
             remove(filename);
         }
     }
 
     free(offsets);
     printf("All files extracted successfully\n");
+    log_printf(LOG_VERBOSE, "%s:%s","extract_datafile","All files extracted successfully");
     fclose(datafile);
     return EXIT_SUCCESS;
 }
@@ -387,6 +487,8 @@ int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entr
     uint64_t actual_length;
     uint64_t actual_offset;
 
+    log_printf(LOG_INFO, "%s:%s %08x %08x","extract_GUTArchive_entry","Extracting entry", entry->start_offset, entry->end_offset);
+
     actual_length = entry->end_offset * 0x800;
     actual_offset = entry->start_offset * 0x800;
     if (_GAME_ID == ITC_T)
@@ -403,6 +505,7 @@ int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entr
     if (file_data == NULL)
     {
         perror("Failed to allocate memory");
+        log_printf(LOG_ERROR, "%s:%s %08x %08x","extract_GUTArchive_entry","Failed to allocate memory for entry", entry->start_offset, entry->end_offset);
         return EXIT_FAILURE;
     }
 
@@ -410,7 +513,7 @@ int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entr
 
     if(!compressed)
     {
-        xwrite(out, file_data, actual_length);
+        xwrite(out, file_data, entry->compressed_size);
     }
     else
     {
@@ -419,9 +522,10 @@ int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entr
         {
             perror("Failed to create temporary file");
             free(file_data);
+            log_printf(LOG_ERROR, "%s:%s %08x %08x","extract_GUTArchive_entry","Failed to create temporary file for entry", entry->start_offset, entry->end_offset);
             return EXIT_FAILURE;
         }
-        xwrite(temp_compressed_file, file_data, actual_length);
+        xwrite(temp_compressed_file, file_data, entry->compressed_size);
         fseek(temp_compressed_file, 0, SEEK_SET);
         free(file_data);
 
@@ -432,13 +536,14 @@ int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entr
             fclose(temp_compressed_file);
             fclose(toc_file);
             fclose(dat_file);
+            log_printf(LOG_ERROR, "%s:%s %08x %08x","extract_GUTArchive_entry","Decompression failed for entry", entry->start_offset, entry->end_offset);
             return EXIT_FAILURE;
         }
         fclose(temp_compressed_file);
     }
 
     fseek(out, 0, SEEK_SET);
-    
+    log_printf(LOG_INFO, "%s:%s %08x %08x","extract_GUTArchive_entry","Finished extracting entry", entry->start_offset, entry->end_offset);
     return EXIT_SUCCESS;
 }
 
@@ -451,10 +556,13 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
     uint32_t file_count = 0;
     toc_entry_t *entries = NULL;
 
+    log_printf(LOG_INFO, "%s:%s","extract_GUTArchive_all","Reading TOC entries");
+
     file_count = get_TOC_entries(toc_file, &entries);
     if (file_count == 0)
     {
         fprintf(stderr, "Failed to read TOC entries\n");
+        log_printf(LOG_ERROR, "%s:%s","extract_GUTArchive_all","Failed to read TOC entries");
         return EXIT_FAILURE;
     }
 
@@ -478,6 +586,7 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
         if (out == NULL)
         {
             perror("Failed to create output file");
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to create output file for file", file_idx);
             free(entries);
             return EXIT_FAILURE;
         }
@@ -485,6 +594,7 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
         if (extract_GUTArchive_entry(toc_file, dat_file, out, &entries[file_idx]) != 0)
         {
             fprintf(stderr, "Failed to extract entry %08x\n", entries[file_idx].start_offset);
+            log_printf(LOG_ERROR, "%s:%s %08x","extract_GUTArchive_all","Failed to extract entry", entries[file_idx].start_offset);
             free(entries);
             fclose(out);
             return EXIT_FAILURE;
@@ -498,6 +608,7 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
         {
             perror("Failed to reopen output file");
             free(entries);
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to reopen output file for file", file_idx);
             return EXIT_FAILURE;
         }
         const char *ext = get_file_extension(out);
@@ -509,6 +620,7 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
         if (rename(filename, new_filename) != 0)
         {
             perror("Failed to rename output file");
+            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to rename output file for file", file_idx);
             remove(filename);
         }
     }
@@ -518,6 +630,7 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
     fclose(toc_file);
     fclose(dat_file);
     printf("All files extracted successfully\n");
+    log_printf(LOG_INFO, "%s:%s","extract_GUTArchive_all","All files extracted successfully");
     return EXIT_SUCCESS;
 }
 
@@ -525,7 +638,6 @@ int extract_GUTArchive_all(FILE* toc_file, FILE* dat_file, const char *output_di
  * Rebuilds a GUT archive from a directory of files
  * Returns 0 on success, non-zero on failure
  */
-// TODO: rewrite needed
 int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const char *input_dir)
 {
     DIR *dir;
@@ -543,10 +655,13 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
     toc_entry_t *toc_entries;
     rebuild_entry_t *files;
 
+    log_printf(LOG_INFO, "%s:%s","rebuild_GUTArchive","Starting to rebuild GUT Archive");
+
     FILE *toc_file = fopen(toc_filename, "r+b");
     if (toc_file == NULL)
     {
         perror("Failed to open .toc file");
+        log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to open .toc file");
         return EXIT_FAILURE;
     }
 
@@ -554,6 +669,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
     if (dat_file == NULL)
     {
         perror("Failed to open .dat file");
+        log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to open .dat file");
         fclose(toc_file);
         return EXIT_FAILURE;
     }
@@ -562,23 +678,27 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
     if (dir == NULL)
     {
         perror("Failed to open input directory");
+        log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to open input directory");
         fclose(toc_file);
         fclose(dat_file);
         return EXIT_FAILURE;
     }
 
     printf("Reading file info from TOC...\n");
+    log_printf(LOG_INFO, "%s:%s","rebuild_GUTArchive","Reading file info from TOC");
 
     file_count = get_TOC_entries(toc_file, &toc_entries);
     if (file_count == 0)
     {
         fprintf(stderr, "Failed to read TOC entries\n");
+        log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to read TOC entries");
         return EXIT_FAILURE;
     }
     files = (rebuild_entry_t *)malloc(file_count * sizeof(rebuild_entry_t));
     if (files == NULL)
     {
         perror("Failed to allocate memory for files");
+        log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to allocate memory for files");
         fclose(toc_file);
         fclose(dat_file);
         closedir(dir);
@@ -625,7 +745,6 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
     }
 
     fseek(dat_file, 0, SEEK_SET);
-    printf("Rebuilding GUT Archive...\n");
 
     /*get file index by file name in input dir*/
     while ((entry = readdir(dir)) != NULL)
@@ -645,11 +764,14 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
 
         file_index = atoi(filename_index);
         printf("Processing file id:%d\n", file_index);
+        log_printf(LOG_INFO, "rebuild_GUTArchive: Processing file id:%d", file_index);
         printf("Block size: %d\n", files[file_index].block_size);
+        log_printf(LOG_INFO, "rebuild_GUTArchive: Block size: %d", files[file_index].block_size);
 
         if (file_index >= file_count)
         {
             printf("Invalid file index for file %s\n", entry->d_name);
+            log_printf(LOG_WARNING, "rebuild_GUTArchive: Invalid file index for file %s", entry->d_name);
             continue;
         }
 
@@ -661,12 +783,15 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
     if (new_dat_file == NULL)
     {
         perror("Failed to create new .dat file");
+        log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to create new .dat file");
         fclose(toc_file);
         fclose(dat_file);
         free(files);
         return EXIT_FAILURE;
     }
 
+    printf("Rebuilding GUT Archive...\n");
+    log_printf(LOG_INFO, "%s:%s","rebuild_GUTArchive","Rebuilding GUT Archive");
 
     for (file_index = 0; file_index < file_count; file_index++)
     {
@@ -700,6 +825,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
                 if (file_data == NULL)
                 {
                     perror("Failed to allocate memory");
+                    log_printf(LOG_ERROR, "%s:%s %u","rebuild_GUTArchive","Failed to allocate memory for file index", file_index);
                     fclose(toc_file);
                     fclose(dat_file);
                     fclose(new_dat_file);
@@ -751,6 +877,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
 
         fseek(input_file, 0, SEEK_END);
         new_decompressed_size = ftell(input_file);
+        log_printf(LOG_INFO, "rebuild_GUTArchive: New decompressed size for file index %d: %u", file_index, new_decompressed_size);
         fseek(input_file, 0, SEEK_SET);
 
         if (!files[file_index].compressed)
@@ -764,6 +891,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             if (uncompressed_file_data == NULL)
             {
                 perror("Failed to allocate memory");
+                log_printf(LOG_ERROR, "%s:%s %u","rebuild_GUTArchive","Failed to allocate memory for file index", file_index);
                 fclose(toc_file);
                 fclose(dat_file);
                 fclose(input_file);
@@ -776,6 +904,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             {
                 while ((new_toc_offset + padded_length) * 0x800 > (swap_uint32(files[file_index].toc_entry.start_offset) + swap_uint32(files[file_index].toc_entry.end_offset) + new_additional_offset) * 0x800)
                 {
+                    log_printf(LOG_WARNING, "rebuild_GUTArchive: Adjusting additional offset for file index %d", file_index);
                     new_additional_offset += 1;
                 }
             }
@@ -783,6 +912,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             {
                 while ((new_toc_offset + padded_length) * 0x800 > (files[file_index].toc_entry.start_offset + files[file_index].toc_entry.end_offset + new_additional_offset) * 0x800)
                 {
+                    log_printf(LOG_WARNING, "rebuild_GUTArchive: Adjusting additional offset for file index %d", file_index);
                     new_additional_offset += 1;
                 }
             }
@@ -813,6 +943,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             if (temp_compressed_file == NULL)
             {
                 perror("Failed to create temporary file");
+                log_printf(LOG_ERROR, "%s:%s","rebuild_GUTArchive","Failed to create temporary file");
                 fclose(toc_file);
                 fclose(dat_file);
                 fclose(input_file);
@@ -825,6 +956,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             if (result != 0)
             {
                 perror("Failed to compress file");
+                log_printf(LOG_ERROR, "%s:%s %u","rebuild_GUTArchive","Failed to compress file index", file_index);
                 fclose(toc_file);
                 fclose(dat_file);
                 fclose(input_file);
@@ -834,6 +966,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             }
 
             new_compressed_size = ftell(temp_compressed_file);
+            log_printf(LOG_INFO, "rebuild_GUTArchive: New compressed size for file index %d: %u", file_index, new_compressed_size);
 
             new_additional_offset = additional_offset;
             padded_length = 1 + (new_compressed_size / 0x800);
@@ -859,6 +992,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             if (compressed_file_data == NULL)
             {
                 perror("Failed to allocate memory");
+                log_printf(LOG_ERROR, "%s:%s %u","rebuild_GUTArchive","Failed to allocate memory for file index", file_index);
                 fclose(toc_file);
                 fclose(dat_file);
                 fclose(input_file);
@@ -894,15 +1028,26 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
 
             additional_offset = new_additional_offset;
         }
+        progress_bar((file_index * 100) / file_count);
+
+        log_printf(LOG_INFO, "rebuild_GUTArchive: Imported entry %u", file_index);
+        log_printf(LOG_INFO, "  Start Offset: %08x", files[file_index].toc_entry.start_offset);
+        log_printf(LOG_INFO, "  Compressed Size: %08x", files[file_index].toc_entry.compressed_size);
+        log_printf(LOG_INFO, "  Decompressed Size: %08x", files[file_index].toc_entry.decompressed_size);
+        log_printf(LOG_INFO, "  End Offset: %08x", files[file_index].toc_entry.end_offset);
     }
     // write changes to TOC
     write_TOC_entries(toc_file, files, file_count);
+    log_printf(LOG_INFO, "%s:%s","rebuild_GUTArchive","Wrote changes to TOC");
 
-    printf("GUT Archive rebuilt successfully\n");
+    progress_bar(100);
+
+    printf("\nGUT Archive rebuilt successfully\n");
+    log_printf(LOG_INFO, "%s:%s","rebuild_GUTArchive","GUT Archive rebuilt successfully");
 
     fclose(toc_file);
     fclose(dat_file);
-
+    
     // delete old dat file and rename new dat file
     remove(dat_filename);
     fclose(new_dat_file);

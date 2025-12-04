@@ -140,5 +140,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    close_log();
+
     return 0;
 }
