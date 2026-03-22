@@ -19,7 +19,7 @@ jobs:
 
       - name: Build
         run: |
-          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.out -Iinclude -I. src/lib/x86_64-linux-gnu/libucl.a
+          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.out -Isrc/include -Isrc -Iinclude -I. src/lib/x86_64-linux-gnu/libucl.a
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -47,7 +47,7 @@ jobs:
       - name: Build
         shell: msys2 {0}
         run: |
-          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
+          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -Isrc/include -Isrc -Iinclude -I. src/lib/win32/libucl.a
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
