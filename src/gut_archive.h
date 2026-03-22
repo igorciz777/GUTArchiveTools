@@ -6,11 +6,7 @@ extern "C" {
 #endif
 
 #include <ucl/ucl.h>
-#ifdef _WIN32
-#include "include/dirent.h"
-#else
 #include <dirent.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
