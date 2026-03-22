@@ -38,7 +38,7 @@
 #define __UCL_H_INCLUDED
 
 #ifndef __UCLCONF_H_INCLUDED
-#include <ucl/uclconf.h>
+#include "uclconf.h"
 #endif
 
 #ifdef __cplusplus
