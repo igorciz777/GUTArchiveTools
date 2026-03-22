@@ -1,0 +1,57 @@
+name: Build Binaries
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build Linux (x86_64)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build
+        run: |
+          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.out -Iinclude -I. src/lib/x86_64-linux-gnu/libucl.a
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gut_archive-linux-x86_64
+          path: gut_archive.out
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows (x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+
+      - name: Build
+        shell: msys2 {0}
+        run: |
+          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gut_archive-windows-x64
+          path: gut_archive.exe
+          if-no-files-found: error

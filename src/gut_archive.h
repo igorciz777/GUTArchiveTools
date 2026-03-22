@@ -12,6 +12,9 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 #include "ucl_func.h"
 #include "gut_file.h"
@@ -468,13 +471,296 @@ int extract_datafile(FILE *datafile, const char *output_dir)
 }
 
 /**
- * Rebuilds a .dat datafile from a directory of files
+ * builds a new .dat datafile from a directory of indexed files
  * Returns 0 on success, non-zero on failure
  */
-int rebuild_datafile(FILE *dat_file, const char *input_dir)
+int build_datafile(const char *input_dir, const char *output_filename)
 {
-    // Implementation of rebuilding the .dat file
-    return 0;
+    typedef struct dat_build_item_t
+    {
+        uint32_t index;
+        bool is_dir;
+        char path[512];
+    } dat_build_item_t;
+
+    DIR *dir = NULL;
+    struct dirent *entry = NULL;
+    dat_build_item_t *items = NULL;
+    uint32_t *offsets = NULL;
+    size_t item_count = 0;
+    size_t capacity = 0;
+    size_t item_idx;
+    FILE *output_file = fopen(output_filename, "wb");
+    int result = EXIT_FAILURE;
+
+    if (output_file == NULL)
+    {
+        perror("Failed to create output .dat file");
+        log_printf(LOG_ERROR, "%s:%s:%s", "build_datafile", "Failed to create output .dat file", output_filename);
+        return EXIT_FAILURE;
+    }
+
+    log_printf(LOG_INFO, "%s:%s:%s", "build_datafile", "Building datafile from directory", input_dir);
+
+    dir = opendir(input_dir);
+    if (dir == NULL)
+    {
+        perror("Failed to open input directory");
+        goto cleanup;
+    }
+
+    while ((entry = readdir(dir)) != NULL)
+    {
+        char number[16];
+        uint32_t number_len = 0;
+        uint32_t file_index;
+        char full_path[512];
+        struct stat st;
+        dat_build_item_t item;
+
+        if (entry->d_name[0] == '\0' || entry->d_name[0] == '.')
+            continue;
+
+        while (entry->d_name[number_len] != '\0' && entry->d_name[number_len] != '.')
+        {
+            if (entry->d_name[number_len] < '0' || entry->d_name[number_len] > '9')
+            {
+                number_len = 0;
+                break;
+            }
+            if (number_len >= (sizeof(number) - 1))
+            {
+                number_len = 0;
+                break;
+            }
+            number[number_len] = entry->d_name[number_len];
+            number_len++;
+        }
+
+        if (number_len == 0)
+            continue;
+
+        number[number_len] = '\0';
+        file_index = (uint32_t)strtoul(number, NULL, 10);
+
+        snprintf(full_path, sizeof(full_path), "%s/%s", input_dir, entry->d_name);
+
+        if (stat(full_path, &st) != 0)
+            continue;
+
+        memset(&item, 0, sizeof(item));
+        item.index = file_index;
+#ifdef _WIN32
+        item.is_dir = (st.st_mode & _S_IFDIR) != 0;
+#else
+        item.is_dir = S_ISDIR(st.st_mode);
+#endif
+        snprintf(item.path, sizeof(item.path), "%s", full_path);
+
+        if (item_count >= capacity)
+        {
+            size_t new_capacity = (capacity == 0) ? 16 : (capacity * 2);
+            dat_build_item_t *new_items = (dat_build_item_t *)realloc(items, new_capacity * sizeof(dat_build_item_t));
+            if (new_items == NULL)
+            {
+                perror("Failed to allocate memory for file list");
+                goto cleanup;
+            }
+            items = new_items;
+            capacity = new_capacity;
+        }
+
+        items[item_count++] = item;
+    }
+
+    if (item_count == 0)
+    {
+        fprintf(stderr, "Error: No indexed files found in '%s'\n", input_dir);
+        goto cleanup;
+    }
+
+    for (item_idx = 1; item_idx < item_count; item_idx++)
+    {
+        size_t j = item_idx;
+        dat_build_item_t key = items[item_idx];
+        while (j > 0 && items[j - 1].index > key.index)
+        {
+            items[j] = items[j - 1];
+            j--;
+        }
+        items[j] = key;
+    }
+
+    for (item_idx = 1; item_idx < item_count; item_idx++)
+    {
+        if (items[item_idx].index == items[item_idx - 1].index)
+        {
+            fprintf(stderr, "Error: Duplicate index %u in '%s'\n", items[item_idx].index, input_dir);
+            goto cleanup;
+        }
+    }
+
+    if (items[0].index != 0)
+    {
+        fprintf(stderr, "Error: First index in '%s' must be 0\n", input_dir);
+        goto cleanup;
+    }
+
+    for (item_idx = 1; item_idx < item_count; item_idx++)
+    {
+        if (items[item_idx].index != (items[item_idx - 1].index + 1))
+        {
+            fprintf(stderr, "Error: Missing index between %u and %u in '%s'\n", items[item_idx - 1].index, items[item_idx].index, input_dir);
+            goto cleanup;
+        }
+    }
+
+    offsets = (uint32_t *)calloc(item_count, sizeof(uint32_t));
+    if (offsets == NULL)
+    {
+        perror("Failed to allocate memory for offset table");
+        goto cleanup;
+    }
+
+    {
+        uint32_t file_count_u32 = (uint32_t)item_count;
+        xwrite(output_file, &file_count_u32, sizeof(file_count_u32));
+        for (item_idx = 0; item_idx < item_count; item_idx++)
+        {
+            uint32_t placeholder = 0;
+            xwrite(output_file, &placeholder, sizeof(placeholder));
+        }
+    }
+
+    {
+        long toc_end = ftell(output_file);
+        uint32_t align_padding;
+        uint32_t total_padding;
+        char zero_line[0x10] = {0};
+
+        if (toc_end < 0)
+            goto cleanup;
+
+        align_padding = (uint32_t)((0x10 - (toc_end % 0x10)) % 0x10);
+        total_padding = align_padding + 0x10;
+
+        while (total_padding >= 0x10)
+        {
+            xwrite(output_file, zero_line, sizeof(zero_line));
+            total_padding -= 0x10;
+        }
+
+        if (total_padding > 0)
+            xwrite(output_file, zero_line, total_padding);
+    }
+
+    for (item_idx = 0; item_idx < item_count; item_idx++)
+    {
+        long offset_pos = ftell(output_file);
+        char buffer[0x4000];
+        uint32_t read_len;
+
+        if (offset_pos < 0 || (unsigned long)offset_pos > 0xFFFFFFFFUL)
+        {
+            fprintf(stderr, "Error: Output file too large\n");
+            goto cleanup;
+        }
+
+        offsets[item_idx] = (uint32_t)offset_pos;
+
+        if (items[item_idx].is_dir)
+        {
+            char nested_tmp_path[L_tmpnam + 1];
+            FILE *nested_file;
+
+            if (tmpnam(nested_tmp_path) == NULL)
+            {
+                fprintf(stderr, "Error: Failed to create temporary filename\n");
+                goto cleanup;
+            }
+
+            if (build_datafile(items[item_idx].path, nested_tmp_path) != EXIT_SUCCESS)
+            {
+                remove(nested_tmp_path);
+                goto cleanup;
+            }
+
+            nested_file = fopen(nested_tmp_path, "rb");
+            if (nested_file == NULL)
+            {
+                perror("Failed to open nested .dat file");
+                remove(nested_tmp_path);
+                goto cleanup;
+            }
+
+            while ((read_len = xread(nested_file, buffer, sizeof(buffer), 1)) > 0)
+            {
+                if (xwrite(output_file, buffer, read_len) != read_len)
+                {
+                    fclose(nested_file);
+                    remove(nested_tmp_path);
+                    goto cleanup;
+                }
+            }
+
+            fclose(nested_file);
+            remove(nested_tmp_path);
+        }
+        else
+        {
+            FILE *src = fopen(items[item_idx].path, "rb");
+            if (src == NULL)
+            {
+                perror("Failed to open input file");
+                goto cleanup;
+            }
+
+            while ((read_len = xread(src, buffer, sizeof(buffer), 1)) > 0)
+            {
+                if (xwrite(output_file, buffer, read_len) != read_len)
+                {
+                    fclose(src);
+                    goto cleanup;
+                }
+            }
+
+            fclose(src);
+        }
+    }
+
+    {
+        long end_pos = ftell(output_file);
+        if (end_pos < 0)
+            goto cleanup;
+
+        fseek(output_file, sizeof(uint32_t), SEEK_SET);
+        for (item_idx = 0; item_idx < item_count; item_idx++)
+        {
+            xwrite(output_file, &offsets[item_idx], sizeof(uint32_t));
+        }
+        fseek(output_file, end_pos, SEEK_SET);
+    }
+
+    result = EXIT_SUCCESS;
+
+cleanup:
+    if (dir != NULL)
+        closedir(dir);
+    if (items != NULL)
+        free(items);
+    if (offsets != NULL)
+        free(offsets);
+    fclose(output_file);
+
+    if (result != EXIT_SUCCESS)
+    {
+        remove(output_filename);
+        return result;
+    }
+
+    printf("Datafile built successfully: %s\n", output_filename);
+    log_printf(LOG_INFO, "%s:%s:%s", "build_datafile", "Datafile built successfully", output_filename);
+    return EXIT_SUCCESS;
 }
 
 /**
@@ -776,7 +1062,8 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
         }
 
         files[file_index].importing = true;
-        sprintf(files[file_index].infilename, "%s/%s", input_dir, entry->d_name);
+        snprintf(files[file_index].infilename, sizeof(files[file_index].infilename), 
+         "%s/%s", input_dir, entry->d_name);
     }
 
     FILE *new_dat_file = fopen("new.dat", "wb");

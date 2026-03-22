@@ -7,7 +7,7 @@ void usage(const char *progname)
     printf("    -r  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
     printf("    -d  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
     printf("    -cd <FILE.DAT>  <OUT_DIR>: \n\textract files from a .dat container\n\n");
-    printf("    -cr <FILE.DAT>  <IN_DIR>: \n\trebuild files into a .dat container\n\n");
+    printf("    -cb <IN_DIR> <OUT_FILE>: \n\tbuild files into a new .dat container\n\n");
     printf("  Compatibility switches (only use if stated):\n");
     printf("    -0: TXR:D2, KR2, KB3, Wangan Midnight Portable, Ninkyouden\n");
     printf("    -2: Import Tuner Challenge, Shutokou Battle X\n");
@@ -37,18 +37,12 @@ int main(int argc, char *argv[])
     /**
      * Two argument modes
      */
-    if (strcmp(argv[1], "-cd") == 0 || (strcmp(argv[1], "-cr") == 0))
+    if (strcmp(argv[1], "-cd") == 0 || (strcmp(argv[1], "-cb") == 0))
     {
         if (argc < 4)
         {
             printf("Error: Insufficient arguments\n");
             usage(argv[0]);
-            return EXIT_FAILURE;
-        }
-        FILE *datafile = fopen(argv[2], "rb");
-        if (datafile == NULL)
-        {
-            perror("Failed to open .dat file");
             return EXIT_FAILURE;
         }
         if (argc > 4)
@@ -65,13 +59,20 @@ int main(int argc, char *argv[])
             if (strcmp(argv[6], "-log") == 0)
                 _LOGS = true;
         }
+        if(strcmp(argv[1], "-cb") == 0)
+        {
+            result = build_datafile(argv[2], argv[3]);
+            return result;
+        }
+        FILE *datafile = fopen(argv[2], "rb");
+        if (datafile == NULL)
+        {
+            perror("Failed to open .dat file");
+            return EXIT_FAILURE;
+        }
         if(strcmp(argv[1], "-cd") == 0)
         {
             result = extract_datafile(datafile, argv[3]);
-        }
-        else
-        {
-            result = rebuild_datafile(datafile, argv[3]);
         }
     }
     /**
