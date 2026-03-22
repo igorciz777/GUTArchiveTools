@@ -6,7 +6,11 @@ extern "C" {
 #endif
 
 #include <ucl/ucl.h>
+#ifdef _WIN32
+#include "include/dirent.h"
+#else
 #include <dirent.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -1045,7 +1049,7 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
         }
 
         char filename_index[300];
-        strncpy(filename_index, entry->d_name, 260);
+        strncpy(filename_index, entry->d_name, 261);
         strtok(filename_index, ".");
 
         file_index = atoi(filename_index);
