@@ -17,19 +17,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libucl-dev
+
       - name: Build
         run: |
-          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.out -Isrc -Iinclude -I. src/lib/x86_64-linux-gnu/libucl.a
+          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive -I. -lucl
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: gut_archive-linux-x86_64
-          path: gut_archive.out
+          path: gut_archive
           if-no-files-found: error
 
   build-windows:
-    name: Build Windows (x64)
+    name: Build Windows (UCRT64)
     runs-on: windows-latest
 
     steps:
@@ -39,15 +44,16 @@ jobs:
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           update: true
           install: >-
-            mingw-w64-x86_64-gcc
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-ucl
 
       - name: Build
         shell: msys2 {0}
         run: |
-          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.exe -Isrc -Iinclude -I. src/lib/win32/libucl.a
+          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

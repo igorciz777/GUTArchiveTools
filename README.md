@@ -11,9 +11,6 @@ gut_archive [mode] -0,... [log]
 ### Modes
 - **-r**  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> into <BUILD.DAT>
 - **-d**  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive to <OUT_DIR>
-- **-dr** <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive recursively (any .dat files inside) to <OUT_DIR>
-- **-rr** <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> recursively, <DAT_OUT> needs to have same name as the .dat file without extension
-- **-a**  <BUILD.TOC> <BUILD.DAT> <FILE>: \n\tadd a new <FILE> to the bottom of the <BUILD.DAT> archive (experimental, doesn't really do anything useful without modyfing game code)
 - **-cd** <FILE.DAT> <OUT_DIR>: Extract files from a .dat container (different from BUILD.DAT!!!)
 - **-cr** <FILE.DAT> <IN_DIR>: Rebuild files into a .dat container (different from BUILD.DAT!!!)
 
@@ -46,10 +43,6 @@ Extracting a .dat container
 Rebuilding a .dat container
 ```shell
 .\gut_archive.exe -cr .\00000010.DAT DAT_IN
-```
-Extracting BUILD.DAT recursively
-```shell
-.\gut_archive.exe -dr .\BUILD.TOC .\BUILD.DAT BUILD_OUT
 ```
 
 ## Game compatibility table
@@ -103,16 +96,16 @@ Extracting BUILD.DAT recursively
 
 ## Building
 ### Windows
-Tested only with mingw gcc
+Needs the MSYS2 environment with the `ucrt64` toolchain and `ucl` library installed.
 ```shell
-gcc -Wall -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
+gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static
 ```
 
 ### Linux
+Needs the `ucl` library installed (`libucl-dev`).
 ```shell
-gcc -Wall -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.out -Iinclude -I. src/lib/x86_64-linux-gnu/libucl.a
+gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive -I. -lucl
 ```
 
 ## Credits
 - [**UCL**](https://www.oberhumer.com/opensource/ucl/) - Used for compression and decompression.
-- [**dirent for Windows**](https://github.com/tronkko/dirent) - Used for directory listing on Windows.

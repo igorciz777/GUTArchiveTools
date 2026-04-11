@@ -1,6 +1,12 @@
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
 /**
  * Magic numbers for files used by Genki
-*/
+ */
 
 static const unsigned char UCL_MAGIC[8] = {0x00, 0xe9, 0x55, 0x43, 0x4c, 0xff, 0x01, 0x1a};
 static const unsigned char XVI[8] = {0x30, 0x49, 0x56, 0x58, 0x30, 0x30, 0x2E, 0x31};
@@ -37,18 +43,15 @@ static const unsigned char BMP[2] = {0x42, 0x4D};
 static const unsigned char GIF[3] = {0x47, 0x49, 0x46};
 static const unsigned char TGA[18] = {0x54, 0x52 ,0x55 ,0x45 ,0x56 ,0x49 ,0x53 ,0x49 ,0x4F ,0x4E ,0x2D ,0x58 ,0x46 ,0x49 ,0x4C ,0x45 ,0x2E ,0x00};
 
-/*not sure about endian of this one, found in c1gp demo*/
 static const unsigned char BSPR[4] = {0x52, 0x50, 0x53, 0x42};
 
-/*found in txr3*/
 static const unsigned char CLT2[4] = {0x43, 0x4C, 0x54, 0x32};
-
 
 typedef struct
 {
     const char extension[16];
     const unsigned char *magic;
-    int magic_size;
+    size_t magic_size;
 } file_extension;
 
 static const file_extension file_extensions[] = {
@@ -86,11 +89,24 @@ static const file_extension file_extensions[] = {
     {"xmdl", XVI, 8}
 };
 
-static const char *find_file_extension(const char *file_header)
+const char *find_file_extension_header(const char *file_header)
 {
     for (long long unsigned int i = 0; i < sizeof(file_extensions) / sizeof(file_extension); i++)
     {
         if (memcmp(file_header, file_extensions[i].magic, file_extensions[i].magic_size) == 0)
+        {
+            return file_extensions[i].extension;
+        }
+    }
+    return "bin";
+}
+
+const char *find_file_extension_footer(const char *file_footer, uint32_t footer_size)
+{
+    char *footer_ptr = (char *)file_footer;
+    for (long long unsigned int i = 0; i < sizeof(file_extensions) / sizeof(file_extension); i++)
+    {
+        if (memcmp(footer_ptr + (footer_size - file_extensions[i].magic_size), file_extensions[i].magic, file_extensions[i].magic_size) == 0)
         {
             return file_extensions[i].extension;
         }
