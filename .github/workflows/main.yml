@@ -3,8 +3,8 @@ name: Build Binaries
 on:
   push:
     branches:
-      # - main
-      - rewrite
+      - main
+      - master
   pull_request:
   workflow_dispatch:
 
