@@ -799,7 +799,7 @@ int extract_GUTArchive_entry(FILE* toc_file, FILE* dat_file, FILE* out, toc_entr
 
     if(!compressed)
     {
-        xwrite(out, file_data, entry->compressed_size);
+        xwrite(out, file_data, actual_length);
     }
     else
     {
@@ -1308,18 +1308,14 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
                 uint32_t start_offset = swap_uint32(files[file_index].toc_entry.start_offset);
                 start_offset += additional_offset;
                 files[file_index].toc_entry.start_offset = swap_uint32(start_offset);
-
-                files[file_index].toc_entry.compressed_size = swap_uint32(new_compressed_size);
-                files[file_index].toc_entry.decompressed_size = swap_uint32(new_decompressed_size);
-                files[file_index].toc_entry.end_offset = swap_uint32(padded_length);
             }
             else
             {
                 files[file_index].toc_entry.start_offset += additional_offset;
-                files[file_index].toc_entry.compressed_size = new_compressed_size;
-                files[file_index].toc_entry.decompressed_size = new_decompressed_size;
-                files[file_index].toc_entry.end_offset = padded_length;
             }
+            files[file_index].toc_entry.compressed_size = new_compressed_size;
+            files[file_index].toc_entry.decompressed_size = new_decompressed_size;
+            files[file_index].toc_entry.end_offset = padded_length;
 
             additional_offset = new_additional_offset;
         }
