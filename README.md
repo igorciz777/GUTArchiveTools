@@ -96,16 +96,16 @@ Rebuilding a .dat container
 
 ## Building
 ### Windows
-Tested only with mingw gcc
+Needs the MSYS2 environment with the `ucrt64` toolchain and `ucl` library installed.
 ```shell
-gcc -Wall -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.exe -Iinclude -I. src/lib/win32/libucl.a
+gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static
 ```
 
 ### Linux
+Needs the `ucl` library installed (`libucl-dev`).
 ```shell
-gcc -Wall -O2 -fomit-frame-pointer src/gut_archive.c -o gut_archive.out -Iinclude -I. src/lib/x86_64-linux-gnu/libucl.a
+gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive -I. -lucl
 ```
 
 ## Credits
 - [**UCL**](https://www.oberhumer.com/opensource/ucl/) - Used for compression and decompression.
-- [**dirent for Windows**](https://github.com/tronkko/dirent) - Used for directory listing on Windows.

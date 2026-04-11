@@ -5,12 +5,8 @@
 extern "C" {
 #endif
 
-#include "include/ucl/ucl.h"
-#ifdef _WIN32
-#include "include/dirent.h"
-#else
+#include <ucl/ucl.h>
 #include <dirent.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -1176,7 +1172,9 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             fseek(new_dat_file, actual_offset, SEEK_SET);
 
             new_additional_offset = additional_offset;
-            padded_length = 1 + (new_decompressed_size / 0x800);
+
+            padded_length = (new_decompressed_size + 0x7FF) / 0x800;
+            if (padded_length == 0) padded_length = 1;
 
             char *uncompressed_file_data = (char *)calloc(padded_length * 0x800, sizeof(char));
             if (uncompressed_file_data == NULL)
@@ -1260,7 +1258,9 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
             log_printf(LOG_INFO, "rebuild_GUTArchive: New compressed size for file index %d: %u", file_index, new_compressed_size);
 
             new_additional_offset = additional_offset;
-            padded_length = 1 + (new_compressed_size / 0x800);
+
+            padded_length = (new_compressed_size + 0x7FF) / 0x800;
+            if (padded_length == 0) padded_length = 1;
 
             if (_GAME_ID == ITC_T)
             {
@@ -1308,14 +1308,18 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
                 uint32_t start_offset = swap_uint32(files[file_index].toc_entry.start_offset);
                 start_offset += additional_offset;
                 files[file_index].toc_entry.start_offset = swap_uint32(start_offset);
+
+                files[file_index].toc_entry.compressed_size = swap_uint32(new_compressed_size);
+                files[file_index].toc_entry.decompressed_size = swap_uint32(new_decompressed_size);
+                files[file_index].toc_entry.end_offset = swap_uint32(padded_length);
             }
             else
             {
                 files[file_index].toc_entry.start_offset += additional_offset;
+                files[file_index].toc_entry.compressed_size = new_compressed_size;
+                files[file_index].toc_entry.decompressed_size = new_decompressed_size;
+                files[file_index].toc_entry.end_offset = padded_length;
             }
-            files[file_index].toc_entry.compressed_size = new_compressed_size;
-            files[file_index].toc_entry.decompressed_size = new_decompressed_size;
-            files[file_index].toc_entry.end_offset = padded_length;
 
             additional_offset = new_additional_offset;
         }

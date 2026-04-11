@@ -18,9 +18,24 @@ void usage(const char *progname)
     printf("\n");
 }
 
+static void parse_optional_args(int argc, char *argv[], int start_idx)
+{
+    for (int i = start_idx; i < argc; i++)
+    {
+        if (strcmp(argv[i], "-log") == 0)
+        {
+            _LOGS = true;
+        }
+        else if (argv[i][0] == '-' && argv[i][1] >= '0' && argv[i][1] <= '9' && argv[i][2] == '\0')
+        {
+            set_game_id(argv[i]);
+        }
+    }
+}
+
 int main(int argc, char *argv[])
 {
-    int result=1;
+    int result = 1;
 
     if (argc < 2)
     {
@@ -35,57 +50,69 @@ int main(int argc, char *argv[])
     }
 
     /**
-     * Two argument modes
+     * Two argument modes:
      */
-    if (strcmp(argv[1], "-cd") == 0 || (strcmp(argv[1], "-cb") == 0))
+    if (strcmp(argv[1], "-cd") == 0)
     {
         if (argc < 4)
         {
-            printf("Error: Insufficient arguments\n");
+            printf("Error: Insufficient arguments for -cd\n");
             usage(argv[0]);
             return EXIT_FAILURE;
         }
-        if (argc > 4)
-        {
-            char arg[5];
-            strncpy(arg, argv[5], 4);
-            if (arg[1] != 'l')
-                set_game_id(arg);
-            else if (strcmp(arg, "-log") == 0)
-                _LOGS = true;
-        }
-        if (argc > 5)
-        {
-            if (strcmp(argv[6], "-log") == 0)
-                _LOGS = true;
-        }
-        if(strcmp(argv[1], "-cb") == 0)
-        {
-            result = build_datafile(argv[2], argv[3]);
-            return result;
-        }
+
+        parse_optional_args(argc, argv, 4);
+
         FILE *datafile = fopen(argv[2], "rb");
         if (datafile == NULL)
         {
             perror("Failed to open .dat file");
             return EXIT_FAILURE;
         }
-        if(strcmp(argv[1], "-cd") == 0)
-        {
-            result = extract_datafile(datafile, argv[3]);
-        }
+
+        result = extract_datafile(datafile, argv[3]);
+        fclose(datafile);
     }
-    /**
-     * Three argument modes
-     */
-    else
+    else if (strcmp(argv[1], "-cb") == 0)
     {
-        if (argc < 5)
+        if (argc < 4)
         {
-            printf("Error: Insufficient arguments\n");
+            printf("Error: Insufficient arguments for -cb\n");
             usage(argv[0]);
             return EXIT_FAILURE;
         }
+
+        parse_optional_args(argc, argv, 4);
+
+        result = build_datafile(argv[2], argv[3]);
+    }
+    /**
+     * Three argument modes:
+     */
+    else if (strcmp(argv[1], "-r") == 0)
+    {
+        if (argc < 5)
+        {
+            printf("Error: Insufficient arguments for -r\n");
+            usage(argv[0]);
+            return EXIT_FAILURE;
+        }
+
+        parse_optional_args(argc, argv, 5);
+
+        result = rebuild_GUTArchive(argv[2], argv[3], argv[4]);
+    }
+    else if (strcmp(argv[1], "-d") == 0)
+    {
+        if (argc < 5)
+        {
+            printf("Error: Insufficient arguments for -d\n");
+            usage(argv[0]);
+            return EXIT_FAILURE;
+        }
+
+        parse_optional_args(argc, argv, 5);
+
         FILE *toc_file = fopen(argv[2], "rb");
         if (toc_file == NULL)
         {
@@ -100,48 +127,24 @@ int main(int argc, char *argv[])
             return EXIT_FAILURE;
         }
 
-        if (argc > 5)
-        {
-            char arg[5];
-            strncpy(arg, argv[5], 4);
-            if (arg[1] != 'l')
-                set_game_id(arg);
-            else if (strcmp(arg, "-log") == 0)
-                _LOGS = true;
-        }
-        if (argc > 6)
-        {
-            if (strcmp(argv[6], "-log") == 0)
-                _LOGS = true;
-        }
-
-        if(strcmp(argv[1], "-r") == 0)
-        {
-            fclose(dat_file);
-            fclose(toc_file);
-            result = rebuild_GUTArchive(argv[2], argv[3], argv[4]);
-        }
-        else if (strcmp(argv[1], "-d") == 0)
-        {
-            result = extract_GUTArchive_all(toc_file, dat_file, argv[4]);
-        }
-        else
-        {
-            printf("Error: Unknown mode '%s'\n", argv[1]);
-            usage(argv[0]);
-            fclose(toc_file);
-            fclose(dat_file);
-            return EXIT_FAILURE;
-        }
+        result = extract_GUTArchive_all(toc_file, dat_file, argv[4]);
+        fclose(toc_file);
+        fclose(dat_file);
+    }
+    else
+    {
+        printf("Error: Unknown mode '%s'\n", argv[1]);
+        usage(argv[0]);
+        return EXIT_FAILURE;
     }
 
     if (result != 0)
     {
         printf("Error: Operation failed\n");
-        return 1;
+        return EXIT_FAILURE;
     }
 
     close_log();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
