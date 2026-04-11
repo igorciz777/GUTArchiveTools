@@ -1,5 +1,4 @@
-#ifndef __GUT_ARCHIVE_INCLUDED
-#define __GUT_ARCHIVE_INCLUDED
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,15 +20,10 @@ extern "C" {
 
 enum GAME_ID
 {
-    /* No comp. flag*/
     DEFAULT,
-    /* KB3 engine games: KB3, TXRD2, KR2, WM Portable, Ninkyouden */
     KB3_T,
-    /* ITC engine games: ITC, SBX */
     ITC_T,
-    /* KB1 Taikenban only weird format */
     KB1T_T,
-    /* KB2 PurePure 2 Volume 10 Demo only format */
     KB2D_T
 };
 
@@ -55,10 +49,7 @@ typedef struct rebuild_entry_t
     toc_entry_t toc_entry;
 } rebuild_entry_t;
 
-/**
- * cool progress bar B-)
- */
-inline void progress_bar(int percentage)
+static inline void progress_bar(int percentage)
 {
     int bar_width = 50;
     int pos = (percentage * bar_width) / 100;
@@ -1351,5 +1342,3 @@ int rebuild_GUTArchive(const char *toc_filename, const char *dat_filename, const
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-#endif /* already included */

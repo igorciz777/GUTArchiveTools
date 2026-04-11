@@ -1,5 +1,4 @@
-#ifndef __UCL_FUNC_H_INCLUDED
-#define __UCL_FUNC_H_INCLUDED
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,14 +15,14 @@ extern "C" {
 
 static char method_name[64];
 
-static ucl_uint get_overhead(int method, ucl_uint size)
+static inline ucl_uint get_overhead(int method, ucl_uint size)
 {
     if (method == 0x2b || method == 0x2d || method == 0x2e)
         return size / 8 + 256;
     return 0;
 }
 
-static ucl_bool set_method_name(int method, int level)
+static inline ucl_bool set_method_name(int method, int level)
 {
     method_name[0] = 0;
     if (level < 1 || level > 10)
@@ -298,5 +297,3 @@ err:
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-#endif /* already included */

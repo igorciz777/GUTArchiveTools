@@ -1,5 +1,4 @@
-#ifndef __GUT_FILE_H_INCLUDED
-#define __GUT_FILE_H_INCLUDED
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,7 +9,7 @@ extern "C" {
 #include <stdbool.h>
 
 /* fwrite wrapper */
-uint32_t xwrite(FILE *f, const void* buf, uint32_t len)
+static inline uint32_t xwrite(FILE *f, const void* buf, uint32_t len)
 {
     uint32_t l;
 
@@ -28,7 +27,7 @@ uint32_t xwrite(FILE *f, const void* buf, uint32_t len)
 }
 
 /* fread wrapper */
-uint32_t xread(FILE *f, void* buf, uint32_t len, bool allow_eof)
+static inline uint32_t xread(FILE *f, void* buf, uint32_t len, bool allow_eof)
 {
     uint32_t l;
     l = (uint32_t)fread(buf, 1, len, f);
@@ -46,7 +45,7 @@ uint32_t xread(FILE *f, void* buf, uint32_t len, bool allow_eof)
 }
 
 /* Read 32-bit integer in big-endian format */
-uint32_t xread32(FILE *f)
+static inline uint32_t xread32(FILE *f)
 {
     unsigned char b[4];
     uint32_t v;
@@ -60,7 +59,7 @@ uint32_t xread32(FILE *f)
 }
 
 /* Write 32-bit integer in big-endian format */
-void xwrite32(FILE *f, uint32_t v)
+static inline void xwrite32(FILE *f, uint32_t v)
 {
     unsigned char b[4];
 
@@ -72,7 +71,7 @@ void xwrite32(FILE *f, uint32_t v)
 }
 
 /* Read a single byte */
-int xgetc(FILE *f)
+static inline int xgetc(FILE *f)
 {
     unsigned char c;
     xread(f, (void*)&c, 1, 0);
@@ -80,7 +79,7 @@ int xgetc(FILE *f)
 }
 
 /* Write a single byte */
-void xputc(FILE *f, int c)
+static inline void xputc(FILE *f, int c)
 {
     unsigned char cc = (unsigned char)c;
     xwrite(f, (const void*)&cc, 1);
@@ -103,5 +102,3 @@ int32_t swap_int32(int32_t val)
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
-
-#endif /* __GUT_FILE_H_INCLUDED */
