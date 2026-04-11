@@ -91,8 +91,6 @@ Rebuilding a .dat container
 ## Current issues
 - A lot of undefined file types
 - Problems with some games
-- Possible issues with building on both platforms
-- Code is a spaghetti mess
 
 ## Building
 ### Windows
