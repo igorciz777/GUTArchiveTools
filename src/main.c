@@ -7,6 +7,7 @@ void usage(const char *progname)
     printf("    -r  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: \n\trebuild files in <IN_DIR> into <BUILD.DAT>\n\n");
     printf("    -d  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: \n\tdecompress and output the archive to <OUT_DIR>\n\n");
     printf("    -cd <FILE.DAT>  <OUT_DIR>: \n\textract files from a .dat container\n\n");
+    printf("    -cdr <IN_DIR> <START> <END> <OUT_DIR> [EXT]: \n\textract .dat range, collect .EXT files sequentially (default: xmdl)\n\n");
     printf("    -cb <IN_DIR> <OUT_FILE>: \n\tbuild files into a new .dat container\n\n");
     printf("  Compatibility switches (only use if stated):\n");
     printf("    -0: TXR:D2, KR2, KB3, Wangan Midnight Portable, Ninkyouden\n");
@@ -71,7 +72,29 @@ int main(int argc, char *argv[])
         }
 
         result = extract_datafile(datafile, argv[3]);
-        fclose(datafile);
+    }
+    else if (strcmp(argv[1], "-cdr") == 0)
+    {
+        if (argc < 6)
+        {
+            printf("Error: Insufficient arguments for -cdr\n");
+            usage(argv[0]);
+            return EXIT_FAILURE;
+        }
+
+        long start = atol(argv[3]);
+        long end = atol(argv[4]);
+        if (start < 0 || end < 0 || start > end)
+        {
+            printf("Error: Invalid range for -cdr\n");
+            return EXIT_FAILURE;
+        }
+
+        const char *ext = (argc > 6) ? argv[6] : "xmdl";
+
+        parse_optional_args(argc, argv, 7);
+
+        result = extract_datafile_range(argv[2], (uint32_t)start, (uint32_t)end, argv[5], ext);
     }
     else if (strcmp(argv[1], "-cb") == 0)
     {

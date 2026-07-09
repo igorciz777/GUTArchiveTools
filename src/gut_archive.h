@@ -353,35 +353,34 @@ void write_TOC_entries(FILE *toc_file, rebuild_entry_t *entries, uint32_t file_c
 }
 
 /**
- * Extracts all entries from a .dat datafile to a specified directory
+ * Internal: extracts files from a .dat to a directory without closing the file
  * Returns 0 on success, non-zero on failure
  */
-
-int extract_datafile(FILE *datafile, const char *output_dir)
+static int _extract_datafile_to_dir(FILE *datafile, const char *output_dir)
 {
     uint32_t file_size;
     uint32_t file_count;
     uint32_t *offsets;
 
-    log_printf(LOG_VERBOSE, "%s:%s","extract_datafile","Starting extraction");
+    log_printf(LOG_VERBOSE, "%s:%s","_extract_datafile_to_dir","Starting extraction");
 
     if(!datafile_check(datafile))
     {
         fprintf(stderr, "Error: Not a valid .dat file\n");
-        log_printf(LOG_ERROR, "%s:%s","extract_datafile","Not a valid .dat file");
+        log_printf(LOG_ERROR, "%s:%s","_extract_datafile_to_dir","Not a valid .dat file");
         return EXIT_FAILURE;
     }
     fseek(datafile, 0, SEEK_END);
     file_size = ftell(datafile);
     fseek(datafile, 0, SEEK_SET);
     xread(datafile, &file_count, 4, 0);
-    log_printf(LOG_INFO, "%s:%s %u","extract_datafile","File count", file_count);
+    log_printf(LOG_INFO, "%s:%s %u","_extract_datafile_to_dir","File count", file_count);
 
     offsets = (uint32_t *)malloc((file_count+1) * sizeof(uint32_t));
     if (offsets == NULL)
     {
         perror("Failed to allocate memory for offsets");
-        log_printf(LOG_ERROR, "%s:%s","extract_datafile","Failed to allocate memory for offsets");
+        log_printf(LOG_ERROR, "%s:%s","_extract_datafile_to_dir","Failed to allocate memory for offsets");
         return EXIT_FAILURE;
     }
     for (uint32_t i = 0; i < file_count; i++)
@@ -391,11 +390,11 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         {
             fprintf(stderr, "Error: Invalid offset in .dat file\n");
             free(offsets);
-            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Invalid offset in .dat file for file", i);
+            log_printf(LOG_ERROR, "%s:%s %u","_extract_datafile_to_dir","Invalid offset in .dat file for file", i);
             return EXIT_FAILURE;
         }
     }
-    offsets[file_count] = file_size; // Last offset is the end of the file
+    offsets[file_count] = file_size;
 
 #ifdef _WIN32
     mkdir(output_dir);
@@ -412,7 +411,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         {
             perror("Failed to create output file");
             free(offsets);
-            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to create output file for file", file_idx);
+            log_printf(LOG_ERROR, "%s:%s %u","_extract_datafile_to_dir","Failed to create output file for file", file_idx);
             return EXIT_FAILURE;
         }
 
@@ -425,7 +424,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
             perror("Failed to allocate memory for file data");
             fclose(out);
             free(offsets);
-            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to allocate memory for file data for file", file_idx);
+            log_printf(LOG_ERROR, "%s:%s %u","_extract_datafile_to_dir","Failed to allocate memory for file data for file", file_idx);
             return EXIT_FAILURE;
         }
         xread(datafile, file_data, actual_length, 0);
@@ -438,7 +437,7 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         {
             perror("Failed to reopen output file");
             free(offsets);
-            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to reopen output file for file", file_idx);
+            log_printf(LOG_ERROR, "%s:%s %u","_extract_datafile_to_dir","Failed to reopen output file for file", file_idx);
             return EXIT_FAILURE;
         }
         const char *ext = get_file_extension(out);
@@ -449,15 +448,154 @@ int extract_datafile(FILE *datafile, const char *output_dir)
         if (rename(filename, new_filename) != 0)
         {
             perror("Failed to rename output file");
-            log_printf(LOG_ERROR, "%s:%s %u","extract_datafile","Failed to rename output file for file", file_idx);
+            log_printf(LOG_ERROR, "%s:%s %u","_extract_datafile_to_dir","Failed to rename output file for file", file_idx);
             remove(filename);
         }
     }
 
     free(offsets);
-    printf("All files extracted successfully\n");
-    log_printf(LOG_VERBOSE, "%s:%s","extract_datafile","All files extracted successfully");
+    log_printf(LOG_VERBOSE, "%s:%s","_extract_datafile_to_dir","All files extracted successfully");
+    return EXIT_SUCCESS;
+}
+
+/**
+ * Extracts all entries from a .dat datafile to a specified directory
+ * Returns 0 on success, non-zero on failure
+ */
+int extract_datafile(FILE *datafile, const char *output_dir)
+{
+    int result = _extract_datafile_to_dir(datafile, output_dir);
     fclose(datafile);
+    if (result == EXIT_SUCCESS)
+        printf("All files extracted successfully\n");
+    return result;
+}
+
+/**
+ * Clean up a directory by removing all files inside it, then the directory itself
+ */
+static void _cleanup_temp_dir(const char *dir_path)
+{
+    DIR *dir = opendir(dir_path);
+    if (dir == NULL)
+        return;
+
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL)
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            continue;
+
+        char filepath[512];
+        snprintf(filepath, sizeof(filepath), "%s/%s", dir_path, entry->d_name);
+        remove(filepath);
+    }
+    closedir(dir);
+
+#ifdef _WIN32
+    rmdir(dir_path);
+#else
+    rmdir(dir_path);
+#endif
+}
+
+/**
+ * Extracts a range of .dat containers and collects files matching an extension
+ * into a single output directory, renamed sequentially (0.ext, 1.ext, 2.ext, ...)
+ * Returns 0 on success
+ */
+int extract_datafile_range(const char *in_dir, uint32_t start_idx, uint32_t end_idx, const char *output_dir, const char *ext)
+{
+    uint32_t total = end_idx - start_idx + 1;
+    int file_counter = 0;
+
+    log_printf(LOG_INFO, "%s:%s %u %u %s", "extract_datafile_range", "Range", start_idx, end_idx, output_dir);
+
+#ifdef _WIN32
+    mkdir(output_dir);
+#else
+    mkdir(output_dir, 0700);
+#endif
+
+    for (uint32_t i = start_idx; i <= end_idx; i++)
+    {
+        char dat_path[512];
+        snprintf(dat_path, sizeof(dat_path), "%s/%08u.dat", in_dir, i);
+
+        FILE *datafile = fopen(dat_path, "rb");
+        if (datafile == NULL)
+        {
+            log_printf(LOG_WARNING, "%s:%s %s", "extract_datafile_range", "Skipping (not found)", dat_path);
+            printf("[%u/%u] Skipping %s (not found)\n", i - start_idx + 1, total, dat_path);
+            continue;
+        }
+
+        char temp_dir[64];
+        snprintf(temp_dir, sizeof(temp_dir), "_cdr_temp_%u", i);
+
+        log_printf(LOG_INFO, "%s:%s %s", "extract_datafile_range", "Extracting", dat_path);
+        printf("[%u/%u] Extracting %s...\n", i - start_idx + 1, total, dat_path);
+
+        int result = _extract_datafile_to_dir(datafile, temp_dir);
+        fclose(datafile);
+
+        if (result != EXIT_SUCCESS)
+        {
+            log_printf(LOG_WARNING, "%s:%s %s", "extract_datafile_range", "Failed to extract", dat_path);
+            _cleanup_temp_dir(temp_dir);
+            continue;
+        }
+
+        DIR *dir = opendir(temp_dir);
+        if (dir == NULL)
+        {
+            _cleanup_temp_dir(temp_dir);
+            continue;
+        }
+
+        struct dirent *entry;
+        while ((entry = readdir(dir)) != NULL)
+        {
+            const char *dot = strrchr(entry->d_name, '.');
+            if (dot == NULL || strcmp(dot + 1, ext) != 0)
+                continue;
+
+            char src_path[512];
+            snprintf(src_path, sizeof(src_path), "%s/%s", temp_dir, entry->d_name);
+
+            char dst_name[512];
+            snprintf(dst_name, sizeof(dst_name), "%s/%d.%s", output_dir, file_counter, ext);
+
+            FILE *src = fopen(src_path, "rb");
+            if (src == NULL)
+                continue;
+
+            FILE *dst = fopen(dst_name, "wb");
+            if (dst == NULL)
+            {
+                fclose(src);
+                continue;
+            }
+
+            char buf[8192];
+            uint32_t n;
+            while ((n = xread(src, buf, sizeof(buf), 1)) > 0)
+                xwrite(dst, buf, n);
+
+            fclose(src);
+            fclose(dst);
+
+            printf("  -> %s -> %d.%s\n", entry->d_name, file_counter, ext);
+            log_printf(LOG_INFO, "%s:%s -> %d.%s", "extract_datafile_range", entry->d_name, file_counter, ext);
+            file_counter++;
+        }
+        closedir(dir);
+
+        _cleanup_temp_dir(temp_dir);
+    }
+
+    printf("\nDone! %d .%s files extracted to %s\n", file_counter, ext, output_dir);
+    log_printf(LOG_INFO, "%s:%s %d %s", "extract_datafile_range", "Done, files extracted", file_counter, output_dir);
     return EXIT_SUCCESS;
 }
 
