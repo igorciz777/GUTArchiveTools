@@ -1,0 +1,11 @@
+[package]
+name = "gut-archive-tools"
+version = "0.1.0"
+edition = "2024"
+links = "ucl"
+
+
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+indicatif = "0.17"

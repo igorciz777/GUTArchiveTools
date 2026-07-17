@@ -1,18 +1,21 @@
 # GUT Archive Tools
-GUT (most likely short for Genki Utility) Archive is an archive type used by the video game company Genki, known mostly for their PS2 racing games.
-This archive was used in games made around 2003-2006.
+
+GUT (most likely short for Genki Utility) Archive is an archive type used by the video game company Genki, known mostly for their PS2 racing games. This archive was used in games made around 2003-2006.
 
 This program is an attempt to reverse engineer the archive to allow file modding.
 
 ## Usage
-```shell
-gut_archive [mode] -0,... [log]
+
 ```
+gut-archive-tools [OPTIONS] <MODE> [ARGS]
+```
+
 ### Modes
-- **-r**  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> into <BUILD.DAT>
-- **-d**  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive to <OUT_DIR>
-- **-cd** <FILE.DAT> <OUT_DIR>: Extract files from a .dat container (different from BUILD.DAT!!!)
-- **-cr** <FILE.DAT> <IN_DIR>: Rebuild files into a .dat container (different from BUILD.DAT!!!)
+- **-r** `<BUILD.TOC> <BUILD.DAT> <IN_DIR>`: Rebuild files in `<IN_DIR>` into `<BUILD.DAT>`
+- **-d** `<BUILD.TOC> <BUILD.DAT> <OUT_DIR>`: Decompress and output the archive to `<OUT_DIR>`
+- **-cd** `<FILE.DAT> <OUT_DIR>`: Extract files from a .dat container
+- **-cb** `<FILE.DAT> <IN_DIR>`: Build a .dat container from files in `<IN_DIR>`
+- **-cdr** `<IN_DIR> <START> <END> <OUT_DIR> <EXT>`: Extract a range of .dat containers and collect files with a given extension
 
 ### Game switches
 - **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu, other games listed [below](#game-compatibility-table)
@@ -24,25 +27,30 @@ gut_archive [mode] -0,... [log]
 - **-log**: Save a log file after decompression/rebuilding
 
 ### Examples
-Regular decompression and extraction
+
+Regular decompression and extraction:
 ```shell
-.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT
 ```
-Decompression with logging
+
+With game switch and logging:
 ```shell
-.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -log
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT -0 -log
 ```
-For TXR:D2 and alike
+
+Extracting a .dat container:
 ```shell
-.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -0
+gut-archive-tools -cd 00000010.DAT DAT_OUT
 ```
-Extracting a .dat container
+
+Building a .dat container:
 ```shell
-.\gut_archive.exe -cd .\00000010.DAT DAT_OUT
+gut-archive-tools -cb 00000010.DAT DAT_IN
 ```
-Rebuilding a .dat container
+
+Rebuild after modifying files:
 ```shell
-.\gut_archive.exe -cr .\00000010.DAT DAT_IN
+gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES
 ```
 
 ## Game compatibility table
@@ -87,22 +95,28 @@ Rebuilding a .dat container
 | Ninkyouden: Toseinin Ichidaiki                  | SLPM 66274 |     PS2    |     :question:     |     :question:     |     :question:     |                |
 | Shutokou Battle: Zone of Control                | ULJM 05017 |     PSP    |     :question:     |     :question:     |     :question:     |                |
 
-
 ## Current issues
 - A lot of undefined file types
 - Problems with some games
 
 ## Building
-### Windows
-Needs the MSYS2 environment with the `ucrt64` toolchain and `ucl` library installed.
-```shell
-gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static
-```
+
+### Prerequisites
+- [Rust](https://www.rust-lang.org/tools/install)
+- System `libucl` (UCL compression library)
 
 ### Linux
-Needs the `ucl` library installed (`libucl-dev`).
 ```shell
-gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive -I. -lucl
+sudo apt install libucl-dev
+cargo build --release
+```
+
+The binary will be at `target/release/gut-archive-tools`.
+
+### Windows
+Install UCL via MSYS2 UCRT64, then:
+```shell
+cargo build --release
 ```
 
 ## Credits

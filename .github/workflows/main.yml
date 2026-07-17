@@ -23,14 +23,13 @@ jobs:
           sudo apt-get install -y libucl-dev
 
       - name: Build
-        run: |
-          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive -I. -lucl
+        run: cargo build --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gut_archive-linux-x86_64
-          path: gut_archive
+          name: gut-archive-tools-linux-x86_64
+          path: target/release/gut-archive-tools
           if-no-files-found: error
 
   build-windows:
@@ -49,15 +48,15 @@ jobs:
           install: >-
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-ucl
+            mingw-w64-ucrt-x86_64-rust
 
       - name: Build
         shell: msys2 {0}
-        run: |
-          gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static
+        run: cargo build --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gut_archive-windows-x64
-          path: gut_archive.exe
+          name: gut-archive-tools-windows-x64
+          path: target/release/gut-archive-tools.exe
           if-no-files-found: error
