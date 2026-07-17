@@ -248,6 +248,7 @@ pub fn extract_gut_archive_all(
     toc_file: &mut (impl Read + Seek),
     dat_file: &mut (impl Read + Seek),
     output_dir: &str,
+    extract_dats: bool,
 ) -> Result<(), String> {
     log_printf(LogType::Info, "extract_GUTArchive_all: Reading TOC entries");
 
@@ -301,6 +302,29 @@ pub fn extract_gut_archive_all(
                 "extract_GUTArchive_all: Failed to rename output file for file {}", file_idx
             ));
             let _ = fs::remove_file(&temp_path);
+        }
+
+        if extract_dats && ext == "dat" {
+            let dat_subdir = new_path.with_extension("");
+            fs::create_dir_all(&dat_subdir).map_err(|e| format!(
+                "extract_GUTArchive_all: Failed to create dat subdirectory: {}", e
+            ))?;
+            let mut dat_file = fs::File::open(&new_path).map_err(|e| format!(
+                "extract_GUTArchive_all: Failed to open dat file: {}", e
+            ))?;
+            match crate::datafile::extract_datafile_to_dir_inner(&mut dat_file, &dat_subdir) {
+                Ok(files) => {
+                    log_printf(LogType::Info, &format!(
+                        "extract_GUTArchive_all: Extracted {} files from {}", files.len(), new_name
+                    ));
+                }
+                Err(e) => {
+                    log_printf(LogType::Warning, &format!(
+                        "extract_GUTArchive_all: Failed to extract dat {}: {}", new_name, e
+                    ));
+                    let _ = fs::remove_dir_all(&dat_subdir);
+                }
+            }
         }
     }
 

@@ -40,6 +40,9 @@ enum Command {
         toc: String,
         dat: String,
         out_dir: String,
+        /// Recursively extract .dat datafiles into subdirectories
+        #[arg(short = 'r', long = "extract-dats")]
+        extract_dats: bool,
         #[arg(last = true)]
         extras: Vec<String>,
     },
@@ -109,6 +112,7 @@ fn main() -> Result<(), String> {
             toc,
             dat,
             out_dir,
+            extract_dats,
             extras,
         } => {
             parse_extras(&extras);
@@ -116,7 +120,7 @@ fn main() -> Result<(), String> {
                 File::open(&toc).map_err(|e| format!("Failed to open .toc file: {}", e))?;
             let mut dat_file =
                 File::open(&dat).map_err(|e| format!("Failed to open .dat file: {}", e))?;
-            extract_gut_archive_all(&mut toc_file, &mut dat_file, &out_dir)?;
+            extract_gut_archive_all(&mut toc_file, &mut dat_file, &out_dir, extract_dats)?;
         }
         Command::ExtractData { dat, out_dir, extras } => {
             parse_extras(&extras);

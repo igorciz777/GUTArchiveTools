@@ -74,7 +74,7 @@ pub fn get_file_extension(file: &mut (impl Read + Seek)) -> String {
     }
 }
 
-fn extract_datafile_to_dir_inner(
+pub fn extract_datafile_to_dir_inner(
     datafile: &mut (impl Read + Seek),
     output_dir: &Path,
 ) -> Result<Vec<String>, String> {
