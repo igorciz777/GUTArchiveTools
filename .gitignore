@@ -33,3 +33,6 @@ new.dat
 
 # Temp files
 *.o
+
+# test files
+test

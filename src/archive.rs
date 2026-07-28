@@ -5,7 +5,7 @@ use std::path::Path;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
-use crate::datafile::get_file_extension;
+use crate::datafile::{extract_dat_buffer_to_dir, get_file_extension, rebuild_dat_from_dir};
 use crate::file_io::{
     swap_uint32, xread, xread32be, xread32le, xwrite, xwrite32be,
 };
@@ -51,6 +51,7 @@ pub struct RebuildEntry {
     pub importing: bool,
     pub compressed: bool,
     pub skip: bool,
+    pub is_dat_dir: bool,
     pub block_size: u32,
     pub infilename: String,
     pub toc_entry: TocEntry,
@@ -248,7 +249,6 @@ pub fn extract_gut_archive_all(
     toc_file: &mut (impl Read + Seek),
     dat_file: &mut (impl Read + Seek),
     output_dir: &str,
-    extract_dats: bool,
 ) -> Result<(), String> {
     log_printf(LogType::Info, "extract_GUTArchive_all: Reading TOC entries");
 
@@ -295,35 +295,42 @@ pub fn extract_gut_archive_all(
         let ext = get_file_extension(&mut out_r);
         drop(out_r);
 
-        let new_name = format!("{:08}.{}", file_idx, ext);
-        let new_path = out_path.join(&new_name);
-        if fs::rename(&temp_path, &new_path).is_err() {
-            log_printf(LogType::Error, &format!(
-                "extract_GUTArchive_all: Failed to rename output file for file {}", file_idx
-            ));
-            let _ = fs::remove_file(&temp_path);
-        }
-
-        if extract_dats && ext == "dat" {
-            let dat_subdir = new_path.with_extension("");
-            fs::create_dir_all(&dat_subdir).map_err(|e| format!(
-                "extract_GUTArchive_all: Failed to create dat subdirectory: {}", e
+        if ext == "dat" {
+            // .dat → extract as folder recursively
+            let dat_dir = out_path.join(format!("{:08}.dat", file_idx));
+            fs::create_dir_all(&dat_dir).map_err(|e| format!(
+                "extract_GUTArchive_all: Failed to create dat directory: {}", e
             ))?;
-            let mut dat_file = fs::File::open(&new_path).map_err(|e| format!(
-                "extract_GUTArchive_all: Failed to open dat file: {}", e
+            let buffer = fs::read(&temp_path).map_err(|e| format!(
+                "extract_GUTArchive_all: Failed to read dat buffer: {}", e
             ))?;
-            match crate::datafile::extract_datafile_to_dir_inner(&mut dat_file, &dat_subdir) {
+            match extract_dat_buffer_to_dir(&buffer, &dat_dir) {
                 Ok(files) => {
+                    let _ = fs::remove_file(&temp_path);
                     log_printf(LogType::Info, &format!(
-                        "extract_GUTArchive_all: Extracted {} files from {}", files.len(), new_name
+                        "extract_GUTArchive_all: Extracted {} files from {:08}.dat",
+                        files.len(), file_idx
                     ));
                 }
                 Err(e) => {
                     log_printf(LogType::Warning, &format!(
-                        "extract_GUTArchive_all: Failed to extract dat {}: {}", new_name, e
+                        "extract_GUTArchive_all: Failed to extract dat {:08}.dat: {}", file_idx, e
                     ));
-                    let _ = fs::remove_dir_all(&dat_subdir);
+                    let _ = fs::remove_dir_all(&dat_dir);
+                    let new_name = format!("{:08}.dat", file_idx);
+                    let new_path = out_path.join(&new_name);
+                    let _ = fs::rename(&temp_path, &new_path);
                 }
+            }
+        } else {
+            // regular file → rename
+            let new_name = format!("{:08}.{}", file_idx, ext);
+            let new_path = out_path.join(&new_name);
+            if fs::rename(&temp_path, &new_path).is_err() {
+                log_printf(LogType::Error, &format!(
+                    "extract_GUTArchive_all: Failed to rename output file for file {}", file_idx
+                ));
+                let _ = fs::remove_file(&temp_path);
             }
         }
     }
@@ -371,6 +378,7 @@ pub fn rebuild_gut_archive(
             importing: false,
             compressed: false,
             skip: false,
+            is_dat_dir: false,
             block_size: 0,
             infilename: String::new(),
             toc_entry: toc_entries[i].clone(),
@@ -408,13 +416,37 @@ pub fn rebuild_gut_archive(
         let name = entry.file_name();
         let name_str = name.to_string_lossy().to_string();
 
-        if !name_str.contains('.') || name_str.starts_with('.') {
+        if name_str.is_empty() || name_str.starts_with('.') {
             continue;
         }
 
-        let dot_pos = name_str.find('.').unwrap();
-        let index_str = &name_str[..dot_pos];
-        let file_index: usize = index_str.parse().unwrap_or(0);
+        let metadata = match fs::metadata(entry.path()) {
+            Ok(m) => m,
+            Err(_) => continue,
+        };
+
+        let is_dir = metadata.is_dir();
+
+        // parse numeric prefix from name
+        let num_str: String = name_str.chars().take_while(|c| c.is_ascii_digit()).collect();
+        if num_str.is_empty() {
+            continue;
+        }
+
+        let file_index: usize = match num_str.parse() {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        // directories must end with ".dat" to be recognized as dat containers
+        if is_dir && !name_str.ends_with(".dat") {
+            continue;
+        }
+
+        // files must have a dot separator after the index
+        if !is_dir && !name_str.contains('.') {
+            continue;
+        }
 
         println!("Processing file id:{}", file_index);
         log_printf(LogType::Info, &format!("rebuild_GUTArchive: Processing file id:{}", file_index));
@@ -428,6 +460,7 @@ pub fn rebuild_gut_archive(
         }
 
         files[file_index].importing = true;
+        files[file_index].is_dat_dir = is_dir;
         files[file_index].infilename = entry.path().to_string_lossy().to_string();
     }
 
@@ -499,12 +532,18 @@ pub fn rebuild_gut_archive(
             "rebuild_GUTArchive: Block size: {}", files[file_index].block_size
         ));
 
-        let mut input_file = fs::File::open(&files[file_index].infilename)
-            .map_err(|e| format!("Failed to open input file: {}", e))?;
+        // get data buffer — either from file or from .dat directory rebuild
+        let input_data: Vec<u8> = if files[file_index].is_dat_dir {
+            rebuild_dat_from_dir(Path::new(&files[file_index].infilename))?
+        } else {
+            let mut input_file = fs::File::open(&files[file_index].infilename)
+                .map_err(|e| format!("Failed to open input file: {}", e))?;
+            let mut data = Vec::new();
+            input_file.read_to_end(&mut data).map_err(|e| e.to_string())?;
+            data
+        };
 
-        input_file.seek(SeekFrom::End(0)).map_err(|e| e.to_string())?;
-        let new_decompressed_size = input_file.stream_position().map_err(|e| e.to_string())? as u32;
-        input_file.seek(SeekFrom::Start(0)).map_err(|e| e.to_string())?;
+        let new_decompressed_size = input_data.len() as u32;
 
         if !files[file_index].compressed {
             new_dat
@@ -544,14 +583,9 @@ pub fn rebuild_gut_archive(
             }
 
             let buf_size = padded_length as usize * 0x800;
-            let mut uncompressed_data = vec![0u8; buf_size];
-            let n = xread(&mut input_file, &mut uncompressed_data, true).map_err(|e| e.to_string())?;
+            let mut uncompressed_data = input_data;
             uncompressed_data.resize(buf_size, 0);
-            if n < new_decompressed_size as usize {
-                // pad with zeros beyond file content
-            }
             xwrite(&mut new_dat, &uncompressed_data).map_err(|e| e.to_string())?;
-            drop(input_file);
 
             if game_id == GameId::ITC {
                 let start = swap_uint32(files[file_index].toc_entry.start_offset);
@@ -565,9 +599,10 @@ pub fn rebuild_gut_archive(
             additional_offset = new_additional_offset;
         } else {
             // compressed
+            let mut input_cursor = std::io::Cursor::new(input_data);
             let mut temp_compressed = std::io::Cursor::new(Vec::new());
             let result = do_compress(
-                &mut input_file,
+                &mut input_cursor,
                 &mut temp_compressed,
                 0x2b,
                 7,
@@ -613,7 +648,6 @@ pub fn rebuild_gut_archive(
                 .seek(SeekFrom::Start(actual_offset))
                 .map_err(|e| e.to_string())?;
             xwrite(&mut new_dat, &comp_data).map_err(|e| e.to_string())?;
-            drop(input_file);
 
             if game_id == GameId::ITC {
                 let start = swap_uint32(files[file_index].toc_entry.start_offset);

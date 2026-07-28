@@ -10,14 +10,15 @@ use std::fs::File;
 
 use clap::Parser;
 
-use archive::{
-    extract_gut_archive_all, rebuild_gut_archive, set_game_id,
-};
-use datafile::{build_datafile, extract_datafile, extract_datafile_range};
+use archive::{extract_gut_archive_all, rebuild_gut_archive, set_game_id};
 use log::{close_log, log_printf, set_logs, LogType};
 
 #[derive(Parser)]
-#[command(name = "gut-archive-tools", version, about = "GUT Archive Tools - extract and rebuild Genki game archives")]
+#[command(
+    name = "gut-archive-tools",
+    version,
+    about = "GUT Archive Tools - extract and rebuild GUT archive format"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -40,37 +41,6 @@ enum Command {
         toc: String,
         dat: String,
         out_dir: String,
-        /// Recursively extract .dat datafiles into subdirectories
-        #[arg(short = 'r', long = "extract-dats")]
-        extract_dats: bool,
-        #[arg(last = true)]
-        extras: Vec<String>,
-    },
-    /// Extract files from a .dat container
-    #[command(name = "-cd")]
-    ExtractData {
-        dat: String,
-        out_dir: String,
-        #[arg(last = true)]
-        extras: Vec<String>,
-    },
-    /// Extract .dat range, collect .EXT files sequentially
-    #[command(name = "-cdr")]
-    ExtractDataRange {
-        in_dir: String,
-        start: u32,
-        end: u32,
-        out_dir: String,
-        #[arg(default_value = "xmdl")]
-        ext: String,
-        #[arg(last = true)]
-        extras: Vec<String>,
-    },
-    /// Build files into a new .dat container
-    #[command(name = "-cb")]
-    BuildData {
-        in_dir: String,
-        out_file: String,
         #[arg(last = true)]
         extras: Vec<String>,
     },
@@ -112,7 +82,6 @@ fn main() -> Result<(), String> {
             toc,
             dat,
             out_dir,
-            extract_dats,
             extras,
         } => {
             parse_extras(&extras);
@@ -120,32 +89,7 @@ fn main() -> Result<(), String> {
                 File::open(&toc).map_err(|e| format!("Failed to open .toc file: {}", e))?;
             let mut dat_file =
                 File::open(&dat).map_err(|e| format!("Failed to open .dat file: {}", e))?;
-            extract_gut_archive_all(&mut toc_file, &mut dat_file, &out_dir, extract_dats)?;
-        }
-        Command::ExtractData { dat, out_dir, extras } => {
-            parse_extras(&extras);
-            let datafile =
-                File::open(&dat).map_err(|e| format!("Failed to open .dat file: {}", e))?;
-            extract_datafile(datafile, &std::path::Path::new(&out_dir))?;
-        }
-        Command::ExtractDataRange {
-            in_dir,
-            start,
-            end,
-            out_dir,
-            ext,
-            extras,
-        } => {
-            parse_extras(&extras);
-            extract_datafile_range(&in_dir, start, end, &out_dir, &ext)?;
-        }
-        Command::BuildData {
-            in_dir,
-            out_file,
-            extras,
-        } => {
-            parse_extras(&extras);
-            build_datafile(&in_dir, &out_file)?;
+            extract_gut_archive_all(&mut toc_file, &mut dat_file, &out_dir)?;
         }
     }
 
