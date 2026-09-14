@@ -53,7 +53,9 @@ jobs:
 
       - name: Build
         shell: msys2 {0}
-        run: cargo build --release
+        run: |
+          export RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-static-libgcc -C link-arg=-Wl,-Bstatic -C link-arg=-lucl -C link-arg=-Wl,-Bdynamic"
+          cargo build --release
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
