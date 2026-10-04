@@ -108,7 +108,7 @@ pub fn get_toc_entries(toc_file: &mut (impl Read + Seek)) -> Result<(u32, Vec<To
                 entry.compressed_size = xread32le(toc_file).map_err(|e| e.to_string())?;
                 entry.decompressed_size = xread32le(toc_file).map_err(|e| e.to_string())?;
                 entry.zero_field = xread32le(toc_file).map_err(|e| e.to_string())?;
-                entry.end_offset = 1 + (entry.compressed_size / 0x800);
+                entry.end_offset = entry.compressed_size.div_ceil(0x800);
             }
             GameId::ITC => {
                 entry.start_offset = xread32le(toc_file).map_err(|e| e.to_string())?;
@@ -120,7 +120,7 @@ pub fn get_toc_entries(toc_file: &mut (impl Read + Seek)) -> Result<(u32, Vec<To
                 entry.end_offset = if entry.zero_field != 0 {
                     0
                 } else {
-                    swap_uint32(1 + (entry.compressed_size / 0x800))
+                    swap_uint32(entry.compressed_size.div_ceil(0x800))
                 };
             }
             GameId::KB1T => {
