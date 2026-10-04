@@ -9,7 +9,7 @@ thread_local! {
 
 static LOG_FILE: Mutex<Option<File>> = Mutex::new(None);
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum LogType {
     Verbose,
     Info,

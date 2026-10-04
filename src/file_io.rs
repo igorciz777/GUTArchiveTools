@@ -6,9 +6,16 @@ pub fn xread(reader: &mut impl Read, buf: &mut [u8], allow_eof: bool) -> io::Res
     if buf.is_empty() {
         return Ok(0);
     }
-    let n = reader.read(buf)?;
+    let n = if allow_eof {
+        reader.read(buf)?
+    } else {
+        reader.read_exact(buf).map(|_| buf.len())?
+    };
     if !allow_eof && n != buf.len() {
-        return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "premature end of file"));
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "premature end of file",
+        ));
     }
     Ok(n)
 }
@@ -59,5 +66,3 @@ pub fn xputc(writer: &mut impl Write, c: u8) -> io::Result<()> {
 pub fn swap_uint32(val: u32) -> u32 {
     val.swap_bytes()
 }
-
-

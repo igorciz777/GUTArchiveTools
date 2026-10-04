@@ -26,11 +26,27 @@ gut-archive-tools [OPTIONS] <MODE> [ARGS]
 ### Logs
 - **-log**: Save a log file after decompression/rebuilding
 
+### Options
+- **-expanddat**: *(**-d**, **-cd**, **-cdr**)* Recursively unpack nested `.dat` containers into
+  folders (`00000012.dat/`)
+- **-forcecompressed**: *(**-r** only)* Force every imported file to be compressed
+- **-forceuncompressed**: *(**-r** only)* Force every imported file to be uncompressed
+
+```shell
+gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES -forcecompressed
+gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES -forceuncompressed
+```
+
 ### Examples
 
 Regular decompression and extraction:
 ```shell
 gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT
+```
+
+Decompression unpacking nested `.dat` containers into folders:
+```shell
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT -expanddat
 ```
 
 With game switch and logging:
@@ -46,6 +62,11 @@ gut-archive-tools -cd 00000010.DAT DAT_OUT
 Building a .dat container:
 ```shell
 gut-archive-tools -cb 00000010.DAT DAT_IN
+```
+
+Extracting a .dat range and collecting `.xmdl` models:
+```shell
+gut-archive-tools -cdr DAT_IN 0 100 XMDL_OUT xmdl
 ```
 
 Rebuild after modifying files:
