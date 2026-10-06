@@ -33,6 +33,7 @@ gut-archive-tools [OPTIONS] <MODE> [ARGS]
 - **-forceuncompressed**: *(**-r** only)* Force every imported file to be uncompressed
 
 ```shell
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT -expanddat
 gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES -forcecompressed
 gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES -forceuncompressed
 ```
@@ -118,7 +119,6 @@ gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES
 
 ## Current issues
 - A lot of undefined file types
-- Problems with some games
 
 ## Building
 
@@ -132,11 +132,12 @@ sudo apt install libucl-dev
 cargo build --release
 ```
 
-The binary will be at `target/release/gut-archive-tools`.
-
 ### Windows
-Install UCL via MSYS2 UCRT64, then:
+Can't be compiled through MSVC due to the `libucl` dependency. Use MSYS2 with `mingw-w64-ucrt-x86_64-ucl` installed.
 ```shell
+pacman -S mingw-w64-ucrt-x86_64-gcc
+pacman -S mingw-w64-ucrt-x86_64-rust
+pacman -S mingw-w64-ucrt-x86_64-ucl
 cargo build --release
 ```
 
