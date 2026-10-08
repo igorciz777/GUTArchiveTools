@@ -1,18 +1,21 @@
 # GUT Archive Tools
-GUT (most likely short for Genki Utility) Archive is an archive type used by the video game company Genki, known mostly for their PS2 racing games.
-This archive was used in games made around 2003-2006.
+
+GUT (most likely short for Genki Utility) Archive is an archive type used by the video game company Genki, known mostly for their PS2 racing games. This archive was used in games made around 2003-2006.
 
 This program is an attempt to reverse engineer the archive to allow file modding.
 
 ## Usage
-```shell
-gut_archive [mode] -0,... [log]
+
 ```
+gut-archive-tools [OPTIONS] <MODE> [ARGS]
+```
+
 ### Modes
-- **-r**  <BUILD.TOC> <BUILD.DAT> <IN_DIR>: Rebuild files in <IN_DIR> into <BUILD.DAT>
-- **-d**  <BUILD.TOC> <BUILD.DAT> <OUT_DIR>: Decompress and output the archive to <OUT_DIR>
-- **-cd** <FILE.DAT> <OUT_DIR>: Extract files from a .dat container (different from BUILD.DAT!!!)
-- **-cr** <FILE.DAT> <IN_DIR>: Rebuild files into a .dat container (different from BUILD.DAT!!!)
+- **-r** `<BUILD.TOC> <BUILD.DAT> <IN_DIR>`: Rebuild files in `<IN_DIR>` into `<BUILD.DAT>`
+- **-d** `<BUILD.TOC> <BUILD.DAT> <OUT_DIR>`: Decompress and output the archive to `<OUT_DIR>`
+- **-cd** `<FILE.DAT> <OUT_DIR>`: Extract files from a .dat container
+- **-cb** `<IN_DIR> <OUT_FILE.DAT>`: Build a .dat container from files in `<IN_DIR>`
+- **-cdr** `<IN_DIR> <START> <END> <OUT_DIR> <EXT>`: Extract a range of .dat containers and collect files with a given extension
 
 ### Game switches
 - **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu, other games listed [below](#game-compatibility-table)
@@ -23,26 +26,53 @@ gut_archive [mode] -0,... [log]
 ### Logs
 - **-log**: Save a log file after decompression/rebuilding
 
+### Options
+- **-expanddat**: *(**-d**, **-cd**, **-cdr**)* Recursively unpack nested `.dat` containers into
+  folders (`00000012.dat/`)
+- **-forcecompressed**: *(**-r** only)* Force every imported file to be compressed
+- **-forceuncompressed**: *(**-r** only)* Force every imported file to be uncompressed
+
+```shell
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT -expanddat
+gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES -forcecompressed
+gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES -forceuncompressed
+```
+
 ### Examples
-Regular decompression and extraction
+
+Regular decompression and extraction:
 ```shell
-.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT
 ```
-Decompression with logging
+
+Decompression unpacking nested `.dat` containers into folders:
 ```shell
-.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -log
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT -expanddat
 ```
-For TXR:D2 and alike
+
+With game switch and logging:
 ```shell
-.\gut_archive.exe -d .\BUILD.TOC .\BUILD.DAT BUILD_OUT -0
+gut-archive-tools -d BUILD.TOC BUILD.DAT BUILD_OUT -0 -log
 ```
-Extracting a .dat container
+
+Extracting a .dat container:
 ```shell
-.\gut_archive.exe -cd .\00000010.DAT DAT_OUT
+gut-archive-tools -cd 00000010.DAT DAT_OUT
 ```
-Rebuilding a .dat container
+
+Building a .dat container:
 ```shell
-.\gut_archive.exe -cr .\00000010.DAT DAT_IN
+gut-archive-tools -cb DAT_IN 00000010.DAT
+```
+
+Extracting a .dat range and collecting `.xmdl` models:
+```shell
+gut-archive-tools -cdr DAT_IN 0 100 XMDL_OUT xmdl
+```
+
+Rebuild after modifying files:
+```shell
+gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES
 ```
 
 ## Game compatibility table
@@ -87,22 +117,30 @@ Rebuilding a .dat container
 | Ninkyouden: Toseinin Ichidaiki                  | SLPM 66274 |     PS2    |     :question:     |     :question:     |     :question:     |                |
 | Shutokou Battle: Zone of Control                | ULJM 05017 |     PSP    |     :question:     |     :question:     |     :question:     |                |
 
-
 ## Current issues
 - A lot of undefined file types
-- Problems with some games
 
 ## Building
-### Windows
-Needs the MSYS2 environment with the `ucrt64` toolchain and `ucl` library installed.
-```shell
-gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static
-```
+
+### Prerequisites
+- [Rust](https://www.rust-lang.org/tools/install)
+- (Windows) MSYS2
+- (Ubuntu) [libucl-dev](https://packages.ubuntu.com/search?suite=all&searchon=names&keywords=libucl-dev) package
+- (Arch) AUR [ucl](https://aur.archlinux.org/packages/ucl) package
+- (Other) manually compile [UCL v1.03](https://www.oberhumer.com/opensource/ucl)
 
 ### Linux
-Needs the `ucl` library installed (`libucl-dev`).
 ```shell
-gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive -I. -lucl
+cargo build --release
+```
+
+### Windows
+Can't be compiled through MSVC due to the `libucl` dependency. Use MSYS2 with `mingw-w64-ucrt-x86_64-ucl` installed.
+```shell
+pacman -S mingw-w64-ucrt-x86_64-gcc
+pacman -S mingw-w64-ucrt-x86_64-rust
+pacman -S mingw-w64-ucrt-x86_64-ucl
+cargo build --release
 ```
 
 ## Credits
