@@ -17,6 +17,7 @@ thread_local! {
     pub static GAME_ID: Cell<GameId> = const { Cell::new(GameId::Default) };
 }
 
+#[allow(clippy::upper_case_acronyms)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum GameId {
     Default = 0,
@@ -438,7 +439,7 @@ pub fn rebuild_gut_archive(
     let mut files: Vec<RebuildEntry> = Vec::with_capacity(file_count as usize);
     let game_id = GAME_ID.with(|g| g.get());
 
-    for i in 0..file_count as usize {
+    for (i, toc_entry) in toc_entries.iter().enumerate() {
         let mut re = RebuildEntry {
             importing: false,
             compressed: false,
@@ -446,7 +447,7 @@ pub fn rebuild_gut_archive(
             is_dat_dir: false,
             block_size: 0,
             infilename: String::new(),
-            toc_entry: toc_entries[i].clone(),
+            toc_entry: toc_entry.clone(),
         };
 
         if game_id == GameId::KB3 {
@@ -454,9 +455,9 @@ pub fn rebuild_gut_archive(
         }
 
         let actual_offset = if game_id == GameId::ITC {
-            swap_uint32(toc_entries[i].start_offset) as u64 * 0x800
+            swap_uint32(toc_entry.start_offset) as u64 * 0x800
         } else {
-            toc_entries[i].start_offset as u64 * 0x800
+            toc_entry.start_offset as u64 * 0x800
         };
 
         if actual_offset == 0 && i > 1 && (game_id == GameId::KB3 || game_id == GameId::ITC) {
@@ -466,11 +467,10 @@ pub fn rebuild_gut_archive(
         re.compressed = match force_compression {
             ForceCompression::Compressed => true,
             ForceCompression::Uncompressed => false,
-            ForceCompression::Keep => toc_entries[i].decompressed_size != 0,
+            ForceCompression::Keep => toc_entry.decompressed_size != 0,
         };
 
-
-        if toc_entries[i].decompressed_size != 0 {
+        if toc_entry.decompressed_size != 0 {
             dat_file
                 .seek(SeekFrom::Start(actual_offset))
                 .map_err(|e| e.to_string())?;
@@ -564,15 +564,15 @@ pub fn rebuild_gut_archive(
     let pb = make_progress(file_count as u64);
     let mut additional_offset: u32 = 0;
 
-    for file_index in 0..file_count as usize {
-        if !files[file_index].importing {
-            if !files[file_index].skip {
+    for (file_index, entry) in files.iter_mut().enumerate() {
+        if !entry.importing {
+            if !entry.skip {
                 // move other files from old dat to new dat with added offset
                 let (old_off, new_off) = if game_id == GameId::ITC {
-                    let o = swap_uint32(files[file_index].toc_entry.start_offset) as u64;
+                    let o = swap_uint32(entry.toc_entry.start_offset) as u64;
                     (o * 0x800, (o + additional_offset as u64) * 0x800)
                 } else {
-                    let o = files[file_index].toc_entry.start_offset as u64;
+                    let o = entry.toc_entry.start_offset as u64;
                     (o * 0x800, (o + additional_offset as u64) * 0x800)
                 };
                 dat_file
@@ -583,9 +583,9 @@ pub fn rebuild_gut_archive(
                     .map_err(|e| e.to_string())?;
 
                 let actual_length = if game_id == GameId::ITC {
-                    swap_uint32(files[file_index].toc_entry.end_offset) as u64 * 0x800
+                    swap_uint32(entry.toc_entry.end_offset) as u64 * 0x800
                 } else {
-                    files[file_index].toc_entry.end_offset as u64 * 0x800
+                    entry.toc_entry.end_offset as u64 * 0x800
                 } as usize;
 
                 let mut file_data = vec![0u8; actual_length];
@@ -594,11 +594,11 @@ pub fn rebuild_gut_archive(
 
                 if additional_offset > 0 {
                     if game_id == GameId::ITC {
-                        let start = swap_uint32(files[file_index].toc_entry.start_offset);
-                        files[file_index].toc_entry.start_offset =
+                        let start = swap_uint32(entry.toc_entry.start_offset);
+                        entry.toc_entry.start_offset =
                             swap_uint32(start + additional_offset);
                     } else {
-                        files[file_index].toc_entry.start_offset += additional_offset;
+                        entry.toc_entry.start_offset += additional_offset;
                     }
                 }
             }
@@ -607,14 +607,14 @@ pub fn rebuild_gut_archive(
 
         // process imported files
         let (actual_offset, new_toc_offset) = if game_id == GameId::ITC {
-            let ao = (swap_uint32(files[file_index].toc_entry.start_offset) + additional_offset)
+            let ao = (swap_uint32(entry.toc_entry.start_offset) + additional_offset)
                 as u64
                 * 0x800;
-            let no = swap_uint32(files[file_index].toc_entry.start_offset) + additional_offset;
+            let no = swap_uint32(entry.toc_entry.start_offset) + additional_offset;
             (ao, no)
         } else {
-            let ao = (files[file_index].toc_entry.start_offset + additional_offset) as u64 * 0x800;
-            let no = files[file_index].toc_entry.start_offset + additional_offset;
+            let ao = (entry.toc_entry.start_offset + additional_offset) as u64 * 0x800;
+            let no = entry.toc_entry.start_offset + additional_offset;
             (ao, no)
         };
 
@@ -622,15 +622,15 @@ pub fn rebuild_gut_archive(
             LogType::Info,
             &format!(
                 "rebuild_GUTArchive: Block size: {}",
-                files[file_index].block_size
+                entry.block_size
             ),
         );
 
         // get data buffer — either from file or from .dat directory rebuild
-        let input_data: Vec<u8> = if files[file_index].is_dat_dir {
-            rebuild_dat_from_dir(Path::new(&files[file_index].infilename))?
+        let input_data: Vec<u8> = if entry.is_dat_dir {
+            rebuild_dat_from_dir(Path::new(&entry.infilename))?
         } else {
-            let mut input_file = fs::File::open(&files[file_index].infilename)
+            let mut input_file = fs::File::open(&entry.infilename)
                 .map_err(|e| format!("Failed to open input file: {}", e))?;
             let mut data = Vec::new();
             input_file
@@ -641,19 +641,19 @@ pub fn rebuild_gut_archive(
 
         let new_decompressed_size = input_data.len() as u32;
 
-        if !files[file_index].compressed {
+        if !entry.compressed {
             new_dat
                 .seek(SeekFrom::Start(actual_offset))
                 .map_err(|e| e.to_string())?;
 
             let mut new_additional_offset = additional_offset;
 
-            let padded_length = ((new_decompressed_size + 0x7FF) / 0x800).max(1);
+            let padded_length = new_decompressed_size.div_ceil(0x800).max(1);
 
             if game_id == GameId::ITC {
                 while (new_toc_offset + padded_length) * 0x800
-                    > (swap_uint32(files[file_index].toc_entry.start_offset)
-                        + swap_uint32(files[file_index].toc_entry.end_offset)
+                    > (swap_uint32(entry.toc_entry.start_offset)
+                        + swap_uint32(entry.toc_entry.end_offset)
                         + new_additional_offset)
                         * 0x800
                 {
@@ -668,8 +668,8 @@ pub fn rebuild_gut_archive(
                 }
             } else {
                 while (new_toc_offset + padded_length) * 0x800
-                    > (files[file_index].toc_entry.start_offset
-                        + files[file_index].toc_entry.end_offset
+                    > (entry.toc_entry.start_offset
+                        + entry.toc_entry.end_offset
                         + new_additional_offset)
                         * 0x800
                 {
@@ -690,14 +690,14 @@ pub fn rebuild_gut_archive(
             xwrite(&mut new_dat, &uncompressed_data).map_err(|e| e.to_string())?;
 
             if game_id == GameId::ITC {
-                let start = swap_uint32(files[file_index].toc_entry.start_offset);
-                files[file_index].toc_entry.start_offset = swap_uint32(start + additional_offset);
+                let start = swap_uint32(entry.toc_entry.start_offset);
+                entry.toc_entry.start_offset = swap_uint32(start + additional_offset);
             } else {
-                files[file_index].toc_entry.start_offset += additional_offset;
+                entry.toc_entry.start_offset += additional_offset;
             }
-            files[file_index].toc_entry.compressed_size = new_decompressed_size;
-            files[file_index].toc_entry.end_offset = padded_length;
-            files[file_index].toc_entry.decompressed_size = 0;
+            entry.toc_entry.compressed_size = new_decompressed_size;
+            entry.toc_entry.end_offset = padded_length;
+            entry.toc_entry.decompressed_size = 0;
             additional_offset = new_additional_offset;
         } else {
             // compressed
@@ -708,7 +708,7 @@ pub fn rebuild_gut_archive(
                 &mut temp_compressed,
                 0x2b,
                 7,
-                files[file_index].block_size,
+                entry.block_size,
             );
             result.map_err(|e| format!("Failed to compress file index {}: {}", file_index, e))?;
 
@@ -720,12 +720,12 @@ pub fn rebuild_gut_archive(
                 .map_err(|e| e.to_string())?;
 
             let mut new_additional_offset = additional_offset;
-            let padded_length = ((new_compressed_size + 0x7FF) / 0x800).max(1);
+            let padded_length = new_compressed_size.div_ceil(0x800).max(1);
 
             if game_id == GameId::ITC {
                 while (new_toc_offset + padded_length) * 0x800
-                    > (swap_uint32(files[file_index].toc_entry.start_offset)
-                        + swap_uint32(files[file_index].toc_entry.end_offset)
+                    > (swap_uint32(entry.toc_entry.start_offset)
+                        + swap_uint32(entry.toc_entry.end_offset)
                         + new_additional_offset)
                         * 0x800
                 {
@@ -733,8 +733,8 @@ pub fn rebuild_gut_archive(
                 }
             } else {
                 while (new_toc_offset + padded_length) * 0x800
-                    > (files[file_index].toc_entry.start_offset
-                        + files[file_index].toc_entry.end_offset
+                    > (entry.toc_entry.start_offset
+                        + entry.toc_entry.end_offset
                         + new_additional_offset)
                         * 0x800
                 {
@@ -756,14 +756,14 @@ pub fn rebuild_gut_archive(
             xwrite(&mut new_dat, &comp_data).map_err(|e| e.to_string())?;
 
             if game_id == GameId::ITC {
-                let start = swap_uint32(files[file_index].toc_entry.start_offset);
-                files[file_index].toc_entry.start_offset = swap_uint32(start + additional_offset);
+                let start = swap_uint32(entry.toc_entry.start_offset);
+                entry.toc_entry.start_offset = swap_uint32(start + additional_offset);
             } else {
-                files[file_index].toc_entry.start_offset += additional_offset;
+                entry.toc_entry.start_offset += additional_offset;
             }
-            files[file_index].toc_entry.compressed_size = new_compressed_size;
-            files[file_index].toc_entry.decompressed_size = new_decompressed_size;
-            files[file_index].toc_entry.end_offset = padded_length;
+            entry.toc_entry.compressed_size = new_compressed_size;
+            entry.toc_entry.decompressed_size = new_decompressed_size;
+            entry.toc_entry.end_offset = padded_length;
             additional_offset = new_additional_offset;
         }
 
@@ -776,28 +776,28 @@ pub fn rebuild_gut_archive(
             LogType::Info,
             &format!(
                 "  Start Offset: {:08x}",
-                files[file_index].toc_entry.start_offset
+                entry.toc_entry.start_offset
             ),
         );
         log_printf(
             LogType::Info,
             &format!(
                 "  Compressed Size: {:08x}",
-                files[file_index].toc_entry.compressed_size
+                entry.toc_entry.compressed_size
             ),
         );
         log_printf(
             LogType::Info,
             &format!(
                 "  Decompressed Size: {:08x}",
-                files[file_index].toc_entry.decompressed_size
+                entry.toc_entry.decompressed_size
             ),
         );
         log_printf(
             LogType::Info,
             &format!(
                 "  End Offset: {:08x}",
-                files[file_index].toc_entry.end_offset
+                entry.toc_entry.end_offset
             ),
         );
     }
