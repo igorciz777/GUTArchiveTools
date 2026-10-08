@@ -23,11 +23,42 @@ const FORCE_UNCOMPRESSED_FLAG: &str = "-forceuncompressed";
 
 use archive::ForceCompression;
 
+/// Top level documentation, printed with `-h`/`--help`.
+const ABOUT: &str = "Extract and rebuild the GUT archive format used by Genki games";
+const LONG_ABOUT: &str = "\
+GUT (most likely short for Genki Utility) Archive is an archive type used by the
+video game company Genki, known mostly for their PS2 racing games. This archive
+was used in games made around 2003-2006.
+
+This program is an attempt to reverse engineer the archive to allow file modding.";
+
+/// Shared documentation for the trailing free-form flag list.
+const AFTER_LONG_HELP: &str = "\
+Game switches (only use the ones listed):
+  -0    Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no
+        Densetsu, Wangan Midnight Portable, Ninkyouden
+  -2    Import Tuner Challenge, Shutokou Battle X
+  -3    Kaidou Battle 1 Taikenban
+  -4    Kaidou Battle 2 PurePure 2 Volume 10 Demo
+
+Other flags:
+  -log                    Write a log file for the operation (-r, -d, -cd, -cdr, -cb)
+  -expanddat              Recursively unpack nested .dat containers into folders
+                          like 00000012.dat/ (-d, -cd, -cdr)
+  -forcecompressed        Force every imported file to be stored compressed (-r)
+  -forceuncompressed      Force every imported file to be stored uncompressed (-r)
+
+See README.md for the list of supported games and their game switches.";
+
 #[derive(Parser)]
 #[command(
     name = "gut-archive-tools",
     version,
-    about = "GUT Archive Tools - extract and rebuild GUT archive format"
+    about = ABOUT,
+    long_about = LONG_ABOUT,
+    after_help = "Run 'gut-archive-tools <MODE> --help' for details about a mode.",
+    after_long_help = AFTER_LONG_HELP,
+    disable_help_subcommand = true
 )]
 struct Cli {
     #[command(subcommand)]
@@ -38,53 +69,130 @@ struct Cli {
 enum Command {
     /// Rebuild files from IN_DIR into BUILD.DAT
     ///
-    /// Pass -forcecompressed or -forceuncompressed to override the compression
-    /// state recorded in the TOC for every imported file.
-    #[command(name = "-r")]
+    /// Reads the file list from BUILD.TOC, replaces the entries whose files are
+    /// found under IN_DIR with the contents of those files, and writes the
+    /// result back into BUILD.DAT. Files in IN_DIR that are not listed in the
+    /// TOC are ignored, and TOC entries with no matching file are kept as-is.
+    ///
+    /// Use this after running -d, editing the extracted files, and putting them
+    /// back in the same relative layout.
+    ///
+    /// The compression state of every imported file is taken from the TOC by
+    /// default; use -forcecompressed or -forceuncompressed to override it.
+    #[command(name = "-r", after_long_help = AFTER_LONG_HELP)]
     Rebuild {
+        /// Path of the .toc file listing the archive contents (e.g. BUILD.TOC)
+        #[arg(value_name = "BUILD.TOC")]
         toc: String,
+
+        /// Path of the .dat archive to rebuild; it is modified in place
+        #[arg(value_name = "BUILD.DAT")]
         dat: String,
+
+        /// Directory holding the modified files, using the paths from the TOC
+        #[arg(value_name = "IN_DIR")]
         in_dir: String,
-        #[arg(last = true)]
+
+        /// Game switches and flags, e.g. -0 -log -forcecompressed
+        #[arg(value_name = "FLAG", trailing_var_arg = true, allow_hyphen_values = true)]
         extras: Vec<String>,
     },
+
     /// Decompress and output the archive to OUT_DIR
     ///
-    /// .dat containers are written out as plain files. Pass -expanddat to
+    /// Uses BUILD.TOC to locate and decompress every file stored in BUILD.DAT.
+    /// Nested .dat containers are written out as plain files; pass -expanddat to
     /// unpack them into folders.
-    #[command(name = "-d")]
+    #[command(name = "-d", after_long_help = AFTER_LONG_HELP)]
     Decompress {
+        /// Path of the .toc file listing the archive contents (e.g. BUILD.TOC)
+        #[arg(value_name = "BUILD.TOC")]
         toc: String,
+
+        /// Path of the .dat archive to read
+        #[arg(value_name = "BUILD.DAT")]
         dat: String,
+
+        /// Directory to create the extracted file tree in
+        #[arg(value_name = "OUT_DIR")]
         out_dir: String,
-        #[arg(last = true)]
+
+        /// Game switches and flags, e.g. -0 -log -expanddat
+        #[arg(value_name = "FLAG", trailing_var_arg = true, allow_hyphen_values = true)]
         extras: Vec<String>,
     },
+
     /// Extract files from a .dat container
-    #[command(name = "-cd")]
+    ///
+    /// Extracts every entry of a single .dat container, without needing a .toc.
+    /// Nested .dat containers are written out as plain files; pass -expanddat to
+    /// unpack them into folders.
+    #[command(name = "-cd", after_long_help = AFTER_LONG_HELP)]
     ExtractDat {
+        /// Path of the .dat container to extract (e.g. 00000010.DAT)
+        #[arg(value_name = "FILE.DAT")]
         dat: String,
+
+        /// Directory to create the extracted file tree in
+        #[arg(value_name = "OUT_DIR")]
         out_dir: String,
-        #[arg(last = true)]
+
+        /// Game switches and flags, e.g. -0 -log -expanddat
+        #[arg(value_name = "FLAG", trailing_var_arg = true, allow_hyphen_values = true)]
         extras: Vec<String>,
     },
-    /// Extract a .dat range and collect files matching EXT sequentially (default: xmdl)
-    #[command(name = "-cdr")]
+
+    /// Extract a .dat range and collect files matching EXT sequentially
+    ///
+    /// Walks the .dat containers named 00000000.dat, 00000001.dat, ... found in
+    /// IN_DIR, extracting those between START and END (inclusive) and collecting
+    /// every file whose extension matches EXT into a single OUT_DIR. This is
+    /// mainly used to pull models (.xmdl) out of a game in one go.
+    #[command(name = "-cdr", after_long_help = AFTER_LONG_HELP)]
     ExtractDatRange {
+        /// Directory holding the numbered .dat containers to read
+        #[arg(value_name = "IN_DIR")]
         in_dir: String,
+
+        /// First container index to process, inclusive
+        #[arg(value_name = "START")]
         start: u32,
+
+        /// Last container index to process, inclusive (must not be below START)
+        #[arg(value_name = "END")]
         end: u32,
+
+        /// Directory to create the collected files in
+        #[arg(value_name = "OUT_DIR")]
         out_dir: String,
+
+        /// Extension of the files to collect, without the dot (default: xmdl)
+        #[arg(value_name = "EXT")]
         ext: Option<String>,
-        #[arg(last = true)]
+
+        /// Game switches and flags, e.g. -0 -log -expanddat
+        #[arg(value_name = "FLAG", trailing_var_arg = true, allow_hyphen_values = true)]
         extras: Vec<String>,
     },
+
     /// Build files into a new .dat container
-    #[command(name = "-cb")]
+    ///
+    /// Creates a single .dat container out of the entries of IN_DIR. Each entry
+    /// must be named with an index prefix followed by an extension (e.g.
+    /// 0000.model); files without such a prefix are ignored, and entries are
+    /// packed in ascending index order. Contents are stored uncompressed.
+    #[command(name = "-cb", after_long_help = AFTER_LONG_HELP)]
     BuildDat {
+        /// Directory holding the files to pack into the container
+        #[arg(value_name = "IN_DIR")]
         in_dir: String,
+
+        /// Path of the .dat container to create (e.g. 00000010.DAT)
+        #[arg(value_name = "OUT_FILE.DAT")]
         out_file: String,
-        #[arg(last = true)]
+
+        /// Game switches and flags, e.g. -0 -log
+        #[arg(value_name = "FLAG", trailing_var_arg = true, allow_hyphen_values = true)]
         extras: Vec<String>,
     },
 }

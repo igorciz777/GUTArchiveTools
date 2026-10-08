@@ -14,7 +14,7 @@ gut-archive-tools [OPTIONS] <MODE> [ARGS]
 - **-r** `<BUILD.TOC> <BUILD.DAT> <IN_DIR>`: Rebuild files in `<IN_DIR>` into `<BUILD.DAT>`
 - **-d** `<BUILD.TOC> <BUILD.DAT> <OUT_DIR>`: Decompress and output the archive to `<OUT_DIR>`
 - **-cd** `<FILE.DAT> <OUT_DIR>`: Extract files from a .dat container
-- **-cb** `<FILE.DAT> <IN_DIR>`: Build a .dat container from files in `<IN_DIR>`
+- **-cb** `<IN_DIR> <OUT_FILE.DAT>`: Build a .dat container from files in `<IN_DIR>`
 - **-cdr** `<IN_DIR> <START> <END> <OUT_DIR> <EXT>`: Extract a range of .dat containers and collect files with a given extension
 
 ### Game switches
@@ -62,7 +62,7 @@ gut-archive-tools -cd 00000010.DAT DAT_OUT
 
 Building a .dat container:
 ```shell
-gut-archive-tools -cb 00000010.DAT DAT_IN
+gut-archive-tools -cb DAT_IN 00000010.DAT
 ```
 
 Extracting a .dat range and collecting `.xmdl` models:
