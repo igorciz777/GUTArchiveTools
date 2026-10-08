@@ -124,11 +124,13 @@ gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES
 
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install)
-- System `libucl` (UCL compression library)
+- (Windows) MSYS2
+- (Ubuntu) [libucl-dev](https://packages.ubuntu.com/search?suite=all&searchon=names&keywords=libucl-dev) package
+- (Arch) AUR [ucl](https://aur.archlinux.org/packages/ucl) package
+- (Other) manually compile [UCL v1.03](https://www.oberhumer.com/opensource/ucl)
 
 ### Linux
 ```shell
-sudo apt install libucl-dev
 cargo build --release
 ```
 
