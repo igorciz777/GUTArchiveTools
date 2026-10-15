@@ -469,7 +469,6 @@ pub fn rebuild_gut_archive(
             ForceCompression::Keep => toc_entries[i].decompressed_size != 0,
         };
 
-
         if toc_entries[i].decompressed_size != 0 {
             dat_file
                 .seek(SeekFrom::Start(actual_offset))
@@ -838,6 +837,228 @@ pub fn rebuild_gut_archive(
     if had_original {
         let _ = fs::remove_file(&backup_path);
     }
+
+    Ok(())
+}
+
+
+const SECTOR_SIZE: u64 = 0x800;
+const HDR_FNM: usize = 0;
+const HDR_MGC_TOTAL_DECOMPRESSED: usize = 2;
+const HDR_MGC_DAT_SIZE: usize = 3;
+
+fn toc_entry_stride(game_id: GameId) -> u32 {
+    match game_id {
+        GameId::KB3 | GameId::ITC => 16,
+        _ => 20,
+    }
+}
+
+fn read_toc_header(toc: &[u8], game_id: GameId) -> [u32; 4] {
+    let mut h = [0u32; 4];
+    for (i, slot) in h.iter_mut().enumerate() {
+        let o = i * 4;
+        let mut v = u32::from_le_bytes([toc[o], toc[o + 1], toc[o + 2], toc[o + 3]]);
+        if game_id == GameId::ITC {
+            v = swap_uint32(v);
+        }
+        *slot = v;
+    }
+    h
+}
+
+fn sum_decompressed_sizes(toc: &[u8], game_id: GameId) -> u64 {
+    let stride = toc_entry_stride(game_id) as usize;
+    let n = (toc.len() - 16) / stride;
+    let mut total = 0u64;
+    for i in 0..n {
+        let o = 16 + i * stride;
+        let mut v = u32::from_le_bytes([toc[o + 8], toc[o + 9], toc[o + 10], toc[o + 11]]);
+        if game_id == GameId::ITC {
+            v = swap_uint32(v);
+        }
+        total += v as u64;
+    }
+    total
+}
+
+fn encode_toc_entry(game_id: GameId, start: u32, stored: u32, decomp: u32) -> Vec<u8> {
+    let mut out = Vec::with_capacity(toc_entry_stride(game_id) as usize);
+    let push = |v: u32, out: &mut Vec<u8>| {
+        let v = if game_id == GameId::ITC {
+            swap_uint32(v)
+        } else {
+            v
+        };
+        out.extend_from_slice(&v.to_le_bytes());
+    };
+
+    match game_id {
+        GameId::KB3 => {
+            push(start, &mut out);
+            push(stored, &mut out);
+            push(decomp, &mut out);
+            push(0, &mut out);
+        }
+        GameId::ITC => {
+            push(start, &mut out);
+            push(stored, &mut out);
+            push(decomp, &mut out);
+            push(0, &mut out);
+        }
+        _ => {
+            push(start, &mut out);
+            push(stored, &mut out);
+            push(stored.div_ceil(SECTOR_SIZE as u32), &mut out);
+            push(0, &mut out);
+            push(decomp, &mut out);
+        }
+    }
+    out
+}
+
+pub fn append_to_archive(
+    toc_filename: &str,
+    dat_filename: &str,
+    input_filename: &str,
+    compress: bool,
+) -> Result<(), String> {
+    let game_id = GAME_ID.with(|g| g.get());
+    let stride = toc_entry_stride(game_id) as usize;
+
+    let toc =
+        fs::read(toc_filename).map_err(|e| format!("Failed to read {}: {}", toc_filename, e))?;
+    if toc.len() < 16 {
+        return Err(format!("{} is too small to be a TOC", toc_filename));
+    }
+    let body = toc.len() - 16;
+    if body % stride != 0 {
+        return Err(format!(
+            "{} is not a valid TOC for this game mode: {} - 16 = {} is not a \
+             multiple of the {} byte entry size",
+            toc_filename,
+            toc.len(),
+            body,
+            stride
+        ));
+    }
+
+    let header = read_toc_header(&toc, game_id);
+    let entries = body / stride;
+    if header[HDR_FNM] as usize != entries {
+        println!(
+            "warning: header says {} entries but the file holds {}",
+            header[HDR_FNM], entries
+        );
+    }
+    let new_index = entries as u32;
+
+    let input = fs::read(input_filename)
+        .map_err(|e| format!("Failed to read {}: {}", input_filename, e))?;
+    if input.is_empty() {
+        return Err("Cannot append an empty file".into());
+    }
+
+    let payload: Vec<u8>;
+    let (stored, decomp) = if compress {
+        let mut src = std::io::Cursor::new(&input);
+        let mut dst = std::io::Cursor::new(Vec::new());
+        do_compress(&mut src, &mut dst, 0x2b, 7, DEFAULT_BLOCK_SIZE)
+            .map_err(|e| format!("Failed to compress the input file: {}", e))?;
+        payload = dst.into_inner();
+        (payload.len() as u32, input.len() as u32)
+    } else {
+        payload = input.clone();
+        (input.len() as u32, 0)
+    };
+
+    let dat_path = Path::new(dat_filename);
+    let dat_len = fs::metadata(dat_path)
+        .map_err(|e| format!("Failed to stat {}: {}", dat_filename, e))?
+        .len();
+    let write_at = dat_len.div_ceil(SECTOR_SIZE) * SECTOR_SIZE;
+    let start_sector = (write_at / SECTOR_SIZE) as u32;
+    if start_sector == 0 {
+        return Err("DAT is empty or unaligned".into());
+    }
+
+    let mut dat = fs::OpenOptions::new()
+        .write(true)
+        .open(dat_path)
+        .map_err(|e| format!("Failed to open {}: {}", dat_filename, e))?;
+    dat.seek(SeekFrom::Start(write_at))
+        .map_err(|e| format!("Failed to seek in {}: {}", dat_filename, e))?;
+    if write_at > dat_len {
+        dat.write_all(&vec![0u8; (write_at - dat_len) as usize])
+            .map_err(|e| format!("Failed to pad {}: {}", dat_filename, e))?;
+    }
+    dat.write_all(&payload)
+        .map_err(|e| format!("Failed to append to {}: {}", dat_filename, e))?;
+
+    let new_len = write_at + payload.len() as u64;
+    let padded_len = new_len.div_ceil(SECTOR_SIZE) * SECTOR_SIZE;
+    if padded_len > new_len {
+        dat.write_all(&vec![0u8; (padded_len - new_len) as usize])
+            .map_err(|e| format!("Failed to pad {}: {}", dat_filename, e))?;
+    }
+    dat.sync_all()
+        .map_err(|e| format!("Failed to sync {}: {}", dat_filename, e))?;
+    drop(dat);
+
+    let mut new_toc = Vec::with_capacity(toc.len() + stride);
+    let mut head = header;
+    head[HDR_FNM] = new_index + 1;
+    match game_id {
+        GameId::KB3 => {
+            head[HDR_MGC_TOTAL_DECOMPRESSED] =
+                (sum_decompressed_sizes(&toc, game_id) + decomp as u64) as u32;
+            head[HDR_MGC_DAT_SIZE] = padded_len as u32;
+        }
+        _ => {}
+    }
+    for v in head {
+        new_toc.extend_from_slice(&v.to_le_bytes());
+    }
+    new_toc.extend_from_slice(&toc[16..]);
+    new_toc.extend_from_slice(&encode_toc_entry(game_id, start_sector, stored, decomp));
+
+    let toc_path = Path::new(toc_filename);
+    let toc_dir = toc_path.parent().unwrap_or(Path::new("."));
+    let tmp_path = toc_dir.join("new.toc");
+    let bak_path = toc_dir.join("old.toc");
+
+    fs::write(&tmp_path, &new_toc)
+        .map_err(|e| format!("Failed to write {}: {}", tmp_path.display(), e))?;
+    let had_original = toc_path.exists();
+    if had_original {
+        fs::rename(toc_path, &bak_path)
+            .map_err(|e| format!("Failed to move the original TOC aside: {}", e))?;
+    }
+    if let Err(e) = fs::rename(&tmp_path, toc_path) {
+        if had_original {
+            let _ = fs::rename(&bak_path, toc_path);
+        }
+        return Err(format!("Failed to install the new TOC: {}", e));
+    }
+    if had_original {
+        let _ = fs::remove_file(&bak_path);
+    }
+
+    println!();
+    println!("Appended {} as entry {}", input_filename, new_index);
+    println!("  start sector   {} (byte {})", start_sector, write_at);
+    println!(
+        "  stored size    {}{}",
+        stored,
+        if compress {
+            format!(" compressed from {}", input.len())
+        } else {
+            String::new()
+        }
+    );
+    println!("  DAT size       {} -> {}", dat_len, padded_len);
+    println!("  entries        {} -> {}", entries, new_index + 1);
+    println!();
 
     Ok(())
 }

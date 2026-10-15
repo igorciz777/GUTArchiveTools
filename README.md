@@ -16,6 +16,7 @@ gut-archive-tools [OPTIONS] <MODE> [ARGS]
 - **-cd** `<FILE.DAT> <OUT_DIR>`: Extract files from a .dat container
 - **-cb** `<FILE.DAT> <IN_DIR>`: Build a .dat container from files in `<IN_DIR>`
 - **-cdr** `<IN_DIR> <START> <END> <OUT_DIR> <EXT>`: Extract a range of .dat containers and collect files with a given extension
+- **-a** `<BUILD.TOC> <BUILD.DAT> <FILE>`: Append a file to the archive as a new entry
 - **-ti** `<BUILD.TOC>`: TOC info: layout, entry count, storage statistics
 - **-te** `<BUILD.TOC> <INDEX>`: One TOC entry in detail
 - **-tl** `<BUILD.TOC>`: List entries as a table, with optional filters

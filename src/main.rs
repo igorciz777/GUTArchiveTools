@@ -11,7 +11,7 @@ use std::fs::File;
 
 use clap::Parser;
 
-use archive::{extract_gut_archive_all, rebuild_gut_archive, set_game_id};
+use archive::{append_to_archive, extract_gut_archive_all, rebuild_gut_archive, set_game_id};
 use datafile::{DatExpansion, build_datafile, extract_datafile, extract_datafile_range};
 use log::{LogType, close_log, log_printf, set_logs};
 
@@ -85,6 +85,20 @@ enum Command {
     BuildDat {
         in_dir: String,
         out_file: String,
+        #[arg(last = true)]
+        extras: Vec<String>,
+    },
+    /// Append a file to the end of BUILD.DAT as a new TOC entry
+    ///
+    /// Pass -compress to store the file UCL-compressed; otherwise it is stored
+    /// uncompressed.
+    #[command(name = "-a")]
+    Append {
+        toc: String,
+        dat: String,
+        input: String,
+        #[arg(long)]
+        compress: bool,
         #[arg(last = true)]
         extras: Vec<String>,
     },
@@ -248,6 +262,16 @@ fn main() -> Result<(), String> {
         } => {
             parse_extras(&extras)?;
             build_datafile(&in_dir, &out_file)?;
+        }
+        Command::Append {
+            toc,
+            dat,
+            input,
+            compress,
+            extras,
+        } => {
+            parse_extras(&extras)?;
+            append_to_archive(&toc, &dat, &input, compress)?;
         }
         Command::TocInfo { toc, extras } => {
             parse_extras(&extras)?;
