@@ -30,6 +30,7 @@ rustc-ice-*.txt
 # Build artifacts
 new.dat
 *.exe
+*.out
 
 # Temp files
 *.o

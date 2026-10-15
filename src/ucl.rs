@@ -14,7 +14,7 @@ fn get_overhead(method: u8, size: ucl_uint) -> ucl_uint {
 }
 
 fn set_method_name(method: u8, level: u8) -> bool {
-    level >= 1 && level <= 10 && matches!(method, 0x2b | 0x2d | 0x2e)
+    (1..=10).contains(&level) && matches!(method, 0x2b | 0x2d | 0x2e)
 }
 
 pub fn do_decompress(fi: &mut (impl Read + Seek), fo: &mut impl Write) -> Result<(), String> {
@@ -39,7 +39,7 @@ pub fn do_decompress(fi: &mut (impl Read + Seek), fo: &mut impl Write) -> Result
             method, level
         ));
     }
-    if block_size < 32 || block_size > 32 * 1024 * 1024 {
+    if !(32..=32 * 1024 * 1024).contains(&block_size) {
         return Err(format!(
             "header error - invalid block size {}",
             block_size
@@ -95,7 +95,7 @@ pub fn do_decompress(fi: &mut (impl Read + Seek), fo: &mut impl Write) -> Result
                     _ => return Err(format!("unknown method {}", method)),
                 }
             };
-            if r != UCL_E_OK as i32 || new_len != out_len {
+            if r != UCL_E_OK || new_len != out_len {
                 return Err(format!(
                     "compressed data violation: error {} (0x{:x}: {}/{}/{})",
                     r, method, in_len, out_len, new_len
@@ -190,10 +190,10 @@ pub fn do_compress(
             }
         };
 
-        if r == UCL_E_OUT_OF_MEMORY as i32 {
+        if r == UCL_E_OUT_OF_MEMORY {
             return Err("out of memory in compress".into());
         }
-        if r != UCL_E_OK as i32
+        if r != UCL_E_OK
             || out_len > in_len as ucl_uint + get_overhead(method, in_len as ucl_uint)
         {
             return Err(format!("internal error - compression failed: {}", r));

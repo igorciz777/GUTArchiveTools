@@ -314,7 +314,7 @@ pub fn rebuild_dat_from_dir(dir_path: &Path) -> Result<Vec<u8>, String> {
     output.resize(header_size as usize, 0);
 
     let align_padding = (0x10 - (header_size % 0x10)) % 0x10;
-    let extra_block = if header_size % 0x10 == 0 { 0x10 } else { 0 };
+    let extra_block = if header_size.is_multiple_of(0x10) { 0x10 } else { 0 };
     let data_start = header_size + align_padding + 0x10 + extra_block;
     output.resize(data_start as usize, 0);
 

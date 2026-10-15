@@ -14,7 +14,7 @@ gut-archive-tools [OPTIONS] <MODE> [ARGS]
 - **-r** `<BUILD.TOC> <BUILD.DAT> <IN_DIR>`: Rebuild files in `<IN_DIR>` into `<BUILD.DAT>`
 - **-d** `<BUILD.TOC> <BUILD.DAT> <OUT_DIR>`: Decompress and output the archive to `<OUT_DIR>`
 - **-cd** `<FILE.DAT> <OUT_DIR>`: Extract files from a .dat container
-- **-cb** `<FILE.DAT> <IN_DIR>`: Build a .dat container from files in `<IN_DIR>`
+- **-cb** `<IN_DIR> <OUT_FILE.DAT>`: Build a .dat container from files in `<IN_DIR>`
 - **-cdr** `<IN_DIR> <START> <END> <OUT_DIR> <EXT>`: Extract a range of .dat containers and collect files with a given extension
 - **-a** `<BUILD.TOC> <BUILD.DAT> <FILE>`: Append a file to the archive as a new entry
 - **-ti** `<BUILD.TOC>`: TOC info: layout, entry count, storage statistics
@@ -70,7 +70,7 @@ gut-archive-tools -cd 00000010.DAT DAT_OUT
 
 Building a .dat container:
 ```shell
-gut-archive-tools -cb 00000010.DAT DAT_IN
+gut-archive-tools -cb DAT_IN 00000010.DAT
 ```
 
 Extracting a .dat range and collecting `.xmdl` models:
@@ -132,11 +132,13 @@ gut-archive-tools -r BUILD.TOC BUILD.DAT MODIFIED_FILES
 
 ### Prerequisites
 - [Rust](https://www.rust-lang.org/tools/install)
-- System `libucl` (UCL compression library)
+- (Windows) MSYS2
+- (Ubuntu) [libucl-dev](https://packages.ubuntu.com/search?suite=all&searchon=names&keywords=libucl-dev) package
+- (Arch) AUR [ucl](https://aur.archlinux.org/packages/ucl) package
+- (Other) manually compile [UCL v1.03](https://www.oberhumer.com/opensource/ucl)
 
 ### Linux
 ```shell
-sudo apt install libucl-dev
 cargo build --release
 ```
 
