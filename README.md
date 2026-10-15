@@ -21,9 +21,7 @@ gut-archive-tools [OPTIONS] <MODE> [ARGS]
 - **-te** `<BUILD.TOC> <INDEX>`: One TOC entry in detail
 - **-tl** `<BUILD.TOC>`: List entries as a table, with optional filters
 
-`-ti`, `-te` and `-tl` are read-only and never touch `BUILD.DAT`. The TOC layout
-comes from the game switches below, so pass the one your game needs. `-tl`
-accepts `--compressed` / `--uncompressed`, `--from N` and `--limit N`.
+`-tl` accepts `--compressed` / `--uncompressed`, `--from N` and `--limit N`.
 
 ### Game switches
 - **-0**: Tokyo Xtreme Racer DRIFT 2, Kaido Racer 2, Kaidou Battle - Touge no Densetsu, other games listed [below](#game-compatibility-table)
