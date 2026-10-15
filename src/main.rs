@@ -3,6 +3,7 @@ mod datafile;
 mod file_io;
 mod headers;
 mod log;
+mod tocinfo;
 mod ucl;
 mod ucl_ffi;
 
@@ -84,6 +85,38 @@ enum Command {
     BuildDat {
         in_dir: String,
         out_file: String,
+        #[arg(last = true)]
+        extras: Vec<String>,
+    },
+    /// Show overall information about a TOC file
+    #[command(name = "-ti")]
+    TocInfo {
+        toc: String,
+        #[arg(last = true)]
+        extras: Vec<String>,
+    },
+    /// Show detailed information about a single TOC entry
+    #[command(name = "-te")]
+    TocEntry {
+        toc: String,
+        index: u32,
+        #[arg(last = true)]
+        extras: Vec<String>,
+    },
+    /// List TOC entries as a table
+    ///
+    /// Filters: --compressed/--uncompressed, --from N, --limit N.
+    #[command(name = "-tl")]
+    TocList {
+        toc: String,
+        #[arg(long)]
+        compressed: bool,
+        #[arg(long)]
+        uncompressed: bool,
+        #[arg(long, default_value_t = 0)]
+        from: u32,
+        #[arg(long, default_value_t = 200)]
+        limit: usize,
         #[arg(last = true)]
         extras: Vec<String>,
     },
@@ -215,6 +248,42 @@ fn main() -> Result<(), String> {
         } => {
             parse_extras(&extras)?;
             build_datafile(&in_dir, &out_file)?;
+        }
+        Command::TocInfo { toc, extras } => {
+            parse_extras(&extras)?;
+            let parsed = tocinfo::Toc::load(&toc)?;
+            tocinfo::print_overview(&parsed);
+        }
+        Command::TocEntry { toc, index, extras } => {
+            parse_extras(&extras)?;
+            let parsed = tocinfo::Toc::load(&toc)?;
+            tocinfo::print_entry(&parsed, index as usize)?;
+        }
+        Command::TocList {
+            toc,
+            compressed,
+            uncompressed,
+            from,
+            limit,
+            extras,
+        } => {
+            parse_extras(&extras)?;
+            if compressed && uncompressed {
+                return Err("--compressed and --uncompressed are mutually exclusive".into());
+            }
+            let filter = tocinfo::Filter {
+                compressed: if compressed {
+                    Some(true)
+                } else if uncompressed {
+                    Some(false)
+                } else {
+                    None
+                },
+                from,
+                limit,
+            };
+            let parsed = tocinfo::Toc::load(&toc)?;
+            tocinfo::print_listing(&parsed, &filter);
         }
     }
 
