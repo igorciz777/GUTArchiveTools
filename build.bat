@@ -1,1 +1,0 @@
-gcc -Wall -Wextra -Wpedantic -O2 -fomit-frame-pointer src/main.c -o gut_archive.exe -I. -lucl -static

@@ -1,0 +1,19 @@
+[package]
+name = "gut-archive-tools"
+version = "0.1.0"
+edition = "2024"
+links = "ucl"
+
+
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+indicatif = "0.17"
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+incremental = false
